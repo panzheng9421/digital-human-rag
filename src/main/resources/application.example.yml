@@ -1,0 +1,12 @@
+# 本文件是模板，提交到仓库。
+# 使用方法：复制为 application.yml 并填入真实 key（application.yml 已被 .gitignore 忽略，不会上传）。
+# 或者设置环境变量后直接运行，无需改本文件：
+#   PowerShell:  $env:DASHSCOPE_API_KEY="sk-xxx"; $env:DEEPSEEK_API_KEY="sk-yyy"
+#   CMD:         set DASHSCOPE_API_KEY=sk-xxx && set DEEPSEEK_API_KEY=sk-yyy
+app:
+  dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
+  deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
+  docs-dir: ./src/main/resources/docs
+  top-k: 3            # 检索召回的片段数
+  dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
+  temperature: 0.7    # 生成随机度

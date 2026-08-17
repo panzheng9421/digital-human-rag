@@ -1,0 +1,24 @@
+# Maven 构建产物
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+
+# 本地敏感配置：含真实 API key 的 application.yml 不进仓库
+# 克隆仓库后请复制 application.example.yml -> application.yml 并填入你的 key
+src/main/resources/application.yml
+
+# 操作系统
+.DS_Store
+Thumbs.db
+*.log
