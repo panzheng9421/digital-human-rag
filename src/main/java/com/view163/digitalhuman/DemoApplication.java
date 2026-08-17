@@ -17,11 +17,14 @@ public class DemoApplication {
     @Bean
     CommandLineRunner runner(ScriptGenerator generator, AppProperties props) {
         return args -> {
-            String topic = args.length > 0 ? String.join(" ", args) : "Agent 落地为什么这么难";
+            String persona = props.getPersona();
+            String docsDir = props.getDocsDir() + "/" + persona;
+            String topic = args.length > 0 ? String.join(" ", args) : "做一下自我介绍";
             System.out.println("=== 数字分身口播稿生成 ===");
+            System.out.println("人设：" + persona + "（知识库：" + docsDir + "）");
             System.out.println("主题：" + topic);
-            generator.buildKnowledgeBase(props.getDocsDir());
-            String script = generator.generate(topic);
+            generator.buildKnowledgeBase(docsDir);
+            String script = generator.generate(topic, persona);
             System.out.println("\n--- 生成的口播稿 ---\n" + script);
         };
     }

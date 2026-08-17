@@ -2,7 +2,7 @@
 
 > 给「数字分身」装大脑的 Spring Boot 工程：输入一个主题，自动从你的私有知识库检索上下文，调用大模型生成一段**像你口吻的短视频口播稿**。
 >
-> 这是「13 年 Java 架构师从 0 造数字分身」系列的工程化部分。形象/声音克隆在即梦 APP 完成，本工程负责「大脑」（写稿），生成稿再贴回即梦出片。
+> 这是「10 年 Java 架构师从 0 造数字分身」系列的工程化部分。形象/声音克隆在即梦 APP 完成，本工程负责「大脑」（写稿），生成稿再贴回即梦出片。
 
 ## 它能做什么
 
@@ -17,7 +17,7 @@
 ```
 
 输入：`怎么用数字人做课程`
-输出：一段 200 字内、口语化、反割韭菜工程师风格的口播稿。
+输出：一段口语化、反割韭菜工程师风格的长口播稿（人设写在 PromptBuilder，长度由规范控制，默认约 185 秒）。
 
 ## 环境要求
 
@@ -52,11 +52,14 @@
 
 ```bash
 cd rag
-mvn spring-boot:run                 # 默认主题：Agent 落地为什么这么难
-mvn spring-boot:run -Dspring-boot.run.arguments="怎么用数字人做课程"   # 自定义主题
+mvn spring-boot:run                 # 默认人设=pan（老潘），默认主题
+mvn spring-boot:run -Dspring-boot.run.arguments="怎么用数字人做课程"          # 自定义主题
+mvn spring-boot:run -Dapp.persona=amei -Dspring-boot.run.arguments="怎么做数字人分身"  # 切阿妹人设
 ```
 
-首次启动会自动加载 `docs/` 下所有 `.md`，切片并向量化进内存，然后针对主题生成口播稿并打印到控制台。
+`app.persona` 决定用哪套 prompt 与哪个知识库（加载 `docs/{persona}` 下的 `.md`）。可选值：`pan`（老潘，默认）/ `amei`（阿妹）。
+
+首次启动会自动加载对应人设 `docs/{persona}/` 下所有 `.md`，切片并向量化进内存，然后针对主题生成口播稿并打印到控制台。
 
 ## 项目结构
 
@@ -74,7 +77,9 @@ rag/
 │  ├─ prompt/PromptBuilder.java   # 人设 + 召回上下文拼装
 │  └─ service/ScriptGenerator.java# 编排以上五步
 └─ src/main/resources/
-   ├─ docs/                       # 样例知识库（包子店稿 + Agent 落地稿）
+   ├─ docs/
+   │  ├─ pan/                     # 老潘知识库（包子店稿 / Agent 落地稿 / 扣子种草 / 剪映吐槽）
+   │  └─ amei/                    # 阿妹知识库（数字人分身制作揭秘）
    ├─ application.example.yml     # 配置模板（入库）
    └─ application.yml             # 真实配置（不入库，需自己建）
 ```
@@ -83,7 +88,7 @@ rag/
 
 - **DeepSeek 不提供 embedding**：向量化必须另接模型（这里用阿里云百炼 `text-embedding-v3`）。这是 RAG 最常见的坑，已在 `EmbeddingClient` 注释中标明。
 - **MVP 零数据库**：向量库用内存 `Map`，启动即建好；后期把 `InMemoryVectorStore` 换成 PGVector 实现同一个 `VectorStore` 接口即可，其余代码不动。
-- **人设可调**：风格写死在 `PromptBuilder`（`13 年 Java 架构师、口语化、自黑、反割韭菜`），改这一段就能调口吻。
+- **人设可调**：风格写死在 `PromptBuilder`（`10 年 Java 架构师、口语化、自黑、反割韭菜`），改这一段就能调口吻。
 - **召回旋钮**：`application.yml` 里的 `top-k` / `chunkSize` / `overlap` 控制召回质量与口播稿贴合度。
 
 ## 路线图（TODO）

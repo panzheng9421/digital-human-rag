@@ -56,11 +56,11 @@ public class ScriptGenerator {
         System.out.println("[RAG] 向量库构建完成，共 " + store.size() + " 条");
     }
 
-    /** 给定主题，检索上下文并生成口播稿 */
-    public String generate(String topic) {
+    /** 给定主题与人设，检索上下文并生成口播稿 */
+    public String generate(String topic, String persona) {
         float[] qv = embedder.embed(topic);
         List<ChunkRecord> ctx = retriever.retrieve(store, qv, topK);
         String user = promptBuilder.buildUser(topic, ctx);
-        return llm.chat(promptBuilder.buildSystem(), user);
+        return llm.chat(promptBuilder.buildSystem(persona), user);
     }
 }

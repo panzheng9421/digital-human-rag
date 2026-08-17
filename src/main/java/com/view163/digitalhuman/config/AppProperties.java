@@ -10,6 +10,7 @@ public class AppProperties {
     private String dashscopeApiKey = "";
     private String deepseekApiKey = "";
     private String docsDir = "./src/main/resources/docs";
+    private String persona = "pan";
     private int topK = 3;
     private int dimension = 1024;
     private double temperature = 0.7;
@@ -36,6 +37,14 @@ public class AppProperties {
 
     public void setDocsDir(String docsDir) {
         this.docsDir = docsDir;
+    }
+
+    public String getPersona() {
+        return persona;
+    }
+
+    public void setPersona(String persona) {
+        this.persona = persona;
     }
 
     public int getTopK() {

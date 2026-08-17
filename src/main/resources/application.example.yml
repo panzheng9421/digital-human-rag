@@ -6,7 +6,8 @@
 app:
   dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
   deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
-  docs-dir: ./src/main/resources/docs
+  docs-dir: ./src/main/resources/docs   # 知识库根目录；实际加载 docs/{persona} 子目录
+  persona: pan        # 人设：pan（老潘）/ amei（阿妹）；决定用哪套 prompt 与哪个知识库
   top-k: 3            # 检索召回的片段数
   dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
   temperature: 0.7    # 生成随机度
