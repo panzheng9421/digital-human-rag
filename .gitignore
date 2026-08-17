@@ -22,3 +22,7 @@ src/main/resources/application.yml
 .DS_Store
 Thumbs.db
 *.log
+
+# 误放入的截图/临时图片
+*.png
+ScreenShot_*

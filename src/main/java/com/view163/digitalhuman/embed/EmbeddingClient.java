@@ -1,5 +1,6 @@
 package com.view163.digitalhuman.embed;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -21,7 +22,7 @@ public class EmbeddingClient {
 
     private final String apiKey;
     private final int dimension;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
     private final HttpClient http = HttpClient.newHttpClient();
     private static final String URL = "https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings";
 
@@ -29,6 +30,8 @@ public class EmbeddingClient {
                            @Value("${app.dimension:1024}") int dimension) {
         this.apiKey = apiKey;
         this.dimension = dimension;
+        this.mapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public float[] embed(String text) {

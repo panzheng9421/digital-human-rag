@@ -1,5 +1,6 @@
 package com.view163.digitalhuman.llm;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -18,7 +19,7 @@ public class DeepSeekClient {
 
     private final String apiKey;
     private final double temperature;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
     private final HttpClient http = HttpClient.newHttpClient();
     private static final String URL = "https://api.deepseek.com/v1/chat/completions";
 
@@ -26,6 +27,8 @@ public class DeepSeekClient {
                           @Value("${app.temperature:0.7}") double temperature) {
         this.apiKey = apiKey;
         this.temperature = temperature;
+        this.mapper = new ObjectMapper()
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     public String chat(String system, String user) {
