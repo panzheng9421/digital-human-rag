@@ -26,3 +26,12 @@ Thumbs.db
 # 误放入的截图/临时图片
 *.png
 ScreenShot_*
+
+# 本地参考图素材库（250MB+ 二进制，不进仓库；代码用 img.triview.cn 的 URL）
+# 仅保留 reference/ 下的文档（.md/.txt）作为接入参考
+reference/*.png
+reference/*.jpeg
+reference/*.jpg
+reference/*.PNG
+reference/*.JPEG
+reference/*.JPG

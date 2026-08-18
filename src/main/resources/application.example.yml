@@ -1,8 +1,8 @@
 # 本文件是模板，提交到仓库。
 # 使用方法：复制为 application.yml 并填入真实 key（application.yml 已被 .gitignore 忽略，不会上传）。
 # 或者设置环境变量后直接运行，无需改本文件：
-#   PowerShell:  $env:DASHSCOPE_API_KEY="sk-xxx"; $env:DEEPSEEK_API_KEY="sk-yyy"
-#   CMD:         set DASHSCOPE_API_KEY=sk-xxx && set DEEPSEEK_API_KEY=sk-yyy
+#   PowerShell:  $env:DASHSCOPE_API_KEY="sk-xxx"; $env:DEEPSEEK_API_KEY="sk-yyy"; $env:RELAY_API_KEY="sk-zzz"
+#   CMD:         set DASHSCOPE_API_KEY=sk-xxx && set DEEPSEEK_API_KEY=sk-yyy && set RELAY_API_KEY=sk-zzz
 app:
   dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
   deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
@@ -11,3 +11,20 @@ app:
   top-k: 3            # 检索召回的片段数
   dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
   temperature: 0.7    # 生成随机度
+
+  # 视频生成（中转站 Seedance，New API 协议，见 rag/API.md）
+  # 真实 key 用环境变量 RELAY_API_KEY 注入，勿硬编码
+  video:
+    relay-base-url: https://new.xlcsh.top/v1/videos
+    relay-api-key: ${RELAY_API_KEY:sk-请替换为中转站key}
+    model-id: seedance-2.5   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
+    # 多参考图：公网可访问的 HTTPS URL，YAML 列表格式（每项一个 URL），按提交顺序传给上游。
+    # 固定 3 张：1 张卧室背景图 + 2 张阿妹图（提升人物与场景一致性）。
+    # 注意：必须是未登录即可直接返回图片的 URL，勿用网页预览地址/临时登录链接/本地路径。
+    reference-image-urls:
+      - https://img.triview.cn/ai/4.png
+      - https://img.triview.cn/ai/5.png
+      - https://img.triview.cn/ai/bedroom.jpg
+    seconds: 30        # 正式出片用 30s（2.5 封顶）；mini 仅支持 5/10
+    size: 720          # 480 / 720（输出比例固定 16:9 横屏，size 不切换横竖屏）
+    ffmpeg-path: ffmpeg  # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
