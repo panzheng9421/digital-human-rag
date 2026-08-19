@@ -25,6 +25,6 @@ app:
       - https://img.triview.cn/ai/4.png
       - https://img.triview.cn/ai/5.png
       - https://img.triview.cn/ai/bedroom.jpg
-    seconds: 15        # 当前调试用 15s；mini 档位多为 5/10，如报时长不支持再调
+    seconds: 5         # 切片粒度与视频时长联动（ScriptSlicer 按 seconds×4 字切片）；mini 支持 5/10s
     size: 720          # 480 / 720（输出比例固定 16:9 横屏，size 不切换横竖屏）
     ffmpeg-path: ffmpeg  # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe

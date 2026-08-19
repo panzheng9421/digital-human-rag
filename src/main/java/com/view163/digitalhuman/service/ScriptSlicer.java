@@ -1,20 +1,28 @@
 package com.view163.digitalhuman.service;
 
+import com.view163.digitalhuman.config.AppProperties;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Stage1.5 切片：把完整口播稿按字数切成 N 段，每段 ≤ ~120 字（对应 30s @ 240字/分），
- * 在句号/问号/感叹号/分号/换行边界封口，不切断语义单元。
- * 超长单句（内部无断句标点且 >120 字）整句成一段（边界情况，正常口播稿不会出现）。
- * 切片放在 Stage1（出稿）之后、Stage2（富化）之前，使每段富化后的画面提示天然匹配 30s。
+ * Stage1.5 切片：把完整口播稿切成 N 段，每段字数 ≤ seconds × CHARS_PER_SECOND，
+ * 使每段天然匹配对应秒数的视频片段（切片粒度与 Video.seconds 自动联动）。
+ * 切片放在 Stage1（出稿）之后、Stage2（富化）之前。
  */
 @Component
 public class ScriptSlicer {
 
-    private static final int MAX_CHARS = 120;
+    private static final int CHARS_PER_SECOND = 4;  // 日常口播语速 ~240 字/分
+
+    private final int maxChars;
+
+    public ScriptSlicer(AppProperties props) {
+        int seconds = props.getVideo().getSeconds();
+        // seconds 异常（≤0）时兜底 120 字（≈30s），避免除零/负数导致整稿变一段
+        this.maxChars = seconds > 0 ? seconds * CHARS_PER_SECOND : 120;
+    }
 
     public List<String> slice(String script) {
         List<String> result = new ArrayList<>();
@@ -24,7 +32,7 @@ public class ScriptSlicer {
         List<String> sentences = splitSentences(script);
         StringBuilder buf = new StringBuilder();
         for (String s : sentences) {
-            if (buf.length() > 0 && buf.length() + s.length() > MAX_CHARS) {
+            if (buf.length() > 0 && buf.length() + s.length() > maxChars) {
                 result.add(buf.toString().trim());
                 buf.setLength(0);
             }

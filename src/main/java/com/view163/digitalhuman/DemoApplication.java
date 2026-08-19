@@ -40,9 +40,9 @@ public class DemoApplication {
             String script = generator.generate(topic, persona);
             System.out.println("\n--- [Stage1] 裸口播稿 ---\n" + script);
 
-            // Stage1.5：切片（每段 ≤30s，在句号边界封口）
+            // Stage1.5：切片（每段 ≤ video.seconds 对应字数，在句号边界封口，粒度随 seconds 联动）
             List<String> slices = slicer.slice(script);
-            System.out.println("\n--- [Stage1.5] 切片（共 " + slices.size() + " 段，每段≤30s）---");
+            System.out.println("\n--- [Stage1.5] 切片（共 " + slices.size() + " 段，每段 ≤ video.seconds 联动字数）---");
             for (int i = 0; i < slices.size(); i++) {
                 System.out.println("\n[片段 " + (i + 1) + "/" + slices.size() + "] " + slices.get(i));
             }
