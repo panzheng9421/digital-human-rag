@@ -17,6 +17,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLParameters;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+
 /**
  * Stage3 出片：按 New API 协议调用 new.xlcsh.top 中转站的 Seedance 2.5 视频生成。
  * 协议详见 rag/API.md。
@@ -35,7 +42,9 @@ public class VideoGenService {
 
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private final HttpClient http = HttpClient.newHttpClient();
+    // 中转站 new.xlcsh.top 的证书不被 JDK 默认信任库识别，这里构建「信任所有证书 + 关闭主机名校验」的专用客户端，
+    // 仅用于该中继请求，避免 SSLHandshakeException(PKIX path building failed)。
+    private final HttpClient http = createTrustAllHttpClient();
 
     public VideoGenService(AppProperties props) {
         AppProperties.Video v = props.getVideo();
@@ -199,5 +208,36 @@ public class VideoGenService {
             if (n != null && !n.asText().isEmpty()) return n.asText();
         }
         return null;
+    }
+
+    /** 构建一个信任所有证书的 HttpClient（跳过证书链与主机名校验），仅用于 new.xlcsh.top 中转站。 */
+    private static HttpClient createTrustAllHttpClient() {
+        try {
+            TrustManager[] trustAll = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[0];
+                        }
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                        }
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                        }
+                    }
+            };
+            SSLContext ctx = SSLContext.getInstance("TLS");
+            ctx.init(null, trustAll, new SecureRandom());
+            // 关闭端点主机名识别，避免自签/域名不匹配触发校验失败
+            SSLParameters sslParams = new SSLParameters();
+            sslParams.setEndpointIdentificationAlgorithm(null);
+            return HttpClient.newBuilder()
+                    .sslContext(ctx)
+                    .sslParameters(sslParams)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("构建信任所有证书的 HttpClient 失败", e);
+        }
     }
 }
