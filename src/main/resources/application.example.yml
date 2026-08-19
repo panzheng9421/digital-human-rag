@@ -17,7 +17,7 @@ app:
   video:
     relay-base-url: https://new.xlcsh.top/v1/videos
     relay-api-key: ${RELAY_API_KEY:sk-请替换为中转站key}
-    model-id: seedance-2.5   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
+    model-id: seedance-2.0-mini   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
     # 多参考图：公网可访问的 HTTPS URL，YAML 列表格式（每项一个 URL），按提交顺序传给上游。
     # 固定 3 张：1 张卧室背景图 + 2 张阿妹图（提升人物与场景一致性）。
     # 注意：必须是未登录即可直接返回图片的 URL，勿用网页预览地址/临时登录链接/本地路径。
@@ -25,6 +25,6 @@ app:
       - https://img.triview.cn/ai/4.png
       - https://img.triview.cn/ai/5.png
       - https://img.triview.cn/ai/bedroom.jpg
-    seconds: 30        # 正式出片用 30s（2.5 封顶）；mini 仅支持 5/10
+    seconds: 15        # 当前调试用 15s；mini 档位多为 5/10，如报时长不支持再调
     size: 720          # 480 / 720（输出比例固定 16:9 横屏，size 不切换横竖屏）
     ffmpeg-path: ffmpeg  # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
