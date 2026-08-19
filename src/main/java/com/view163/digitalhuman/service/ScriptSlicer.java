@@ -14,11 +14,14 @@ import java.util.List;
  *   1) 优先在主标点（。！？；\n）处断句
  *   2) 单句超 maxChars 时，在次级标点（，、：——）处强制截断
  *   3) 结果 < maxChars×0.4（过短）时，贪心合并下一段，避免 5s 视频只说 4 个字
+ *
+ * 英文保护：硬切时自动回溯到单词边界，不会把 seedream 切成 seedre/am、
+ *   text-embedding 切成 embedding/-v3
  */
 @Component
 public class ScriptSlicer {
 
-    private static final int CHARS_PER_SECOND = 4;  // 日常口播语速 ~240 字/分
+    private static final int CHARS_PER_SECOND = 5;  // 口播语速 ~300 字/分（稍快时自然语速）
     private static final double MIN_FILL_RATIO = 0.4;  // 段最短不低于上限的 40%
 
     /** 主标点：自然断句位置 */
@@ -120,16 +123,39 @@ public class ScriptSlicer {
                 buf.setLength(0);
             }
             buf.append(p);
-            // 无标点的纯文字块可能超限，硬切
+            // 无标点的纯文字块可能超限，硬切（保护英文单词不在中间断开）
             if (buf.length() > maxChars) {
-                chunks.add(buf.substring(0, maxChars).trim());
-                buf = new StringBuilder(buf.substring(maxChars));
+                int cutPos = findWordBoundary(buf.toString(), maxChars);
+                chunks.add(buf.substring(0, cutPos).trim());
+                buf = new StringBuilder(buf.substring(cutPos));
             }
         }
         if (buf.length() > 0) {
             chunks.add(buf.toString().trim());
         }
         return chunks;
+    }
+
+    // ── 单词边界保护 ───────────────────────────────────────
+
+    /**
+     * 硬切时保护英文单词/技术术语不在中间断开。
+     * 如果 cutPos 落在 [a-zA-Z0-9._-] 序列中间，向前回溯到最近的词边界。
+     * 最少保留 maxChars 的 60%，防止回溯过多导致该段过长。
+     */
+    private int findWordBoundary(String text, int cutPos) {
+        int minCut = Math.max(1, (int) (cutPos * 0.6));
+        int pos = cutPos;
+        // 如果切点在单词字符中间，往前找词边界
+        while (pos > minCut && isWordChar(text.charAt(pos - 1))) {
+            pos--;
+        }
+        return Math.max(minCut, pos);
+    }
+
+    private boolean isWordChar(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')
+                || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.';
     }
 
     // ── Step 3: 过短段合并 ───────────────────────────────────
