@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.view163.digitalhuman.config.AppProperties;
-import org.springframework.stereotype.Service;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -25,13 +24,13 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 
 /**
- * Stage3 出片：按 New API 协议调用 new.xlcsh.top 中转站的 Seedance 2.5 视频生成。
+ * Stage3 出片（Seedance 引擎）：按 New API 协议调用 new.xlcsh.top 中转站的 Seedance 视频生成。
  * 协议详见 rag/API.md。
  * 流程：POST /v1/videos（多参考图 input_reference + metadata.audio） -> GET /v1/videos/{id} 轮询 -> 下载 MP4。
  * 说明：New API 的 Seedance 渠道输出比例固定 16:9 横屏，size 字符串不切换横竖屏（Vlog 横屏正好）。
+ * 实现 VideoGenerator 契约，由 DemoApplication 的 videoGenerator() 工厂按 app.video.provider 选择。
  */
-@Service
-public class VideoGenService {
+public class VideoGenService implements VideoGenerator {
 
     private final String baseUrl;
     private final String apiKey;
@@ -48,12 +47,12 @@ public class VideoGenService {
     // 仅用于该中继请求，避免 SSLHandshakeException(PKIX path building failed)。
     private final HttpClient http = createTrustAllHttpClient();
 
-    public VideoGenService(AppProperties props) {
+    public VideoGenService(AppProperties props, String persona) {
         AppProperties.Video v = props.getVideo();
         this.baseUrl = v.getRelayBaseUrl();
         this.apiKey = v.getRelayApiKey();
         this.modelId = v.getModelId();
-        this.referenceImageUrls = v.getReferenceImageUrls() == null ? List.of() : v.getReferenceImageUrls();
+        this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
         this.seconds = v.getSeconds();
         this.size = v.getSize();
         this.outputDir = v.getOutputDir();

@@ -19,14 +19,24 @@ app:
     relay-api-key: ${RELAY_API_KEY:sk-请替换为中转站key}
     model-id: seedance-2.0-mini   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
     # 多参考图：公网可访问的 HTTPS URL，YAML 列表格式（每项一个 URL），按提交顺序传给上游。
-    # 固定 3 张：1 张儿童房场景背景图 + 2 张阿诺图（提升人物与场景一致性）。
+    # 默认 3 张：1 张儿童房场景背景图 + 2 张人物图（提升人物与场景一致性）。
+    # 可用 pan-reference-image-urls / anuo-reference-image-urls 按人设覆盖（为空则回落本列表）。
     # 注意：必须是未登录即可直接返回图片的 URL，勿用网页预览地址/临时登录链接/本地路径。
     reference-image-urls:
       - https://img.triview.cn/ai/4.png
       - https://img.triview.cn/ai/5.png
       - https://img.triview.cn/ai/bedroom.jpg
+    # pan-reference-image-urls:    # 老潘专属参考图（示例：夜晚卧室背景覆盖默认白天）
+    #   - https://img.triview.cn/ai/4.png
+    #   - https://img.triview.cn/ai/5.png
+    #   - https://img.triview.cn/ai/bedroom-night.jpg
     seconds: 5         # 切片粒度与视频时长联动（ScriptSlicer 按 seconds×4 字切片）；mini 支持 5/10s
     size: 720          # 480 / 720（输出比例固定 16:9 横屏，size 不切换横竖屏）
     output-dir: ./output          # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
     retry-attempts: 1             # 单切片出片失败时的额外重试次数（不含首次）
+    provider: seedance            # 出片引擎：seedance（默认，new.xlcsh.top 中转）/ grok（api.x.ai）
+    grok-api-key: ${XAI_API_KEY:}  # Grok 引擎密钥；为空时回退读环境变量 XAI_API_KEY
+    grok-base-url: https://api.x.ai  # Grok API 基地址；走中转站时改为如 https://sub.xlcsh.icu（勿带末尾斜杠）
+    reference-audio-ids: []        # Grok 预设人声 voice_id 列表，最多 3 个；非空时启用 reference_audios 自合成语音
+    # 可选音色：eve=活力明快(演示播报) / ara=温暖友好(对话服务) / leo=权威有力(教学讲解) / rex=自信清晰(商务客服) / sal=平稳均衡(通用百搭)
     ffmpeg-path: ffmpeg  # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe

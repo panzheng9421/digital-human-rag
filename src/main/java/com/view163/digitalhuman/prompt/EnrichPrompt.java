@@ -52,7 +52,7 @@ public class EnrichPrompt {
             在【保持一致】之后，继续在同一 [画面提示] 块内输出【音色锚定】内嵌子段（台词节奏已内联进【事件脚本】，不再单独成段，详见下方第三部分）：
 
             【生成目标】
-            生成<角色名>盘腿坐于儿童房大床中央、正对镜头自然口播的连续视频；核心主体是<角色名>，主要事件是讲述本段口播内容。
+            生成{posture}、正对镜头自然口播的连续视频；核心主体是<角色名>，主要事件是讲述本段口播内容。
 
             【参考素材职责】
             @图片1用于<角色名>的五官、发型和服装，不采用图片背景。
@@ -60,7 +60,7 @@ public class EnrichPrompt {
             @图片3用于儿童房场景的空间布局、家具和光线，不采用图中人物。
 
             【主体与关系】
-            <角色名>对应@图片1和@图片2，始终保持五官、发型和服装一致；盘腿坐在大床中央正对镜头。
+            <角色名>对应@图片1和@图片2，始终保持五官、发型和服装一致；{posture_detail}
             背景由@图片3锚定，为明亮清新的儿童房风格、自然光照明。
 
             【整体风格】
@@ -70,14 +70,14 @@ public class EnrichPrompt {
             禁止以下任何风格或瑕疵：手绘、素描、线稿、插画、漫画、动画；分镜稿、故事板、草稿；AI 数字人塑料感、油亮假皮、塑料 CG、油画过度 CG、玩偶感、3D 渲染感；黑白、单色、灰度、古色；面部畸变、五官扭曲、多手指、肢体错位。
 
             【事件脚本】（时间戳硬规则：总时长严格={videoSeconds}秒，绝对不可超。格式示例：[0s]、[0s-{videoSeconds}s]、[{videoSeconds}s]）
-            [0s]开始时：<角色名>盘腿坐床中央，姿态放松，正对镜头，准备开口。
-            [0s-{videoSeconds}s]主要事件：<按本段口播台词自然讲述；台词用{}包裹，如{今天想跟你们聊聊...}；配合微动作/惯性动作与对应情绪的自然反应，动作与台词融为一段连续叙事；将{videoSeconds}秒均匀拆分为3-6个时间子段（如[0s-5s][5s-15s][15s-24s][24s-30s]），每段有独立动作+台词；在每个时间子段内用散文内联节奏信息——如"重音落在『天天』『取代』、语速放缓、停顿约1.5秒"，不要另产[台词节奏]独立表格>。
-            ⚠️ 时间戳铁律：最后一个时间子段的结束值必须恰好等于{videoSeconds}（如30s片段最后一段必须是[xxs-30s]），绝不允许出现[{videoSeconds+1}s]及以后的任何时间戳。如果台词太多放不下，宁可删减台词内容也不得延长时间。
+            [0s]开始时：<角色名>{posture_short}，姿态放松，正对镜头，准备开口。
+            [0s-{videoSeconds}s]主要事件：<按本段口播台词自然讲述；台词用{}包裹，如{今天想跟你们聊聊...}；配合微动作/惯性动作与对应情绪的自然反应，动作与台词融为一段连续叙事；将{videoSeconds}秒均匀拆分为3-6个时间子段（每段约{videoSecondsDiv}秒），每段有独立动作+台词；在每个时间子段内用散文内联节奏信息——如"重音落在『天天』『取代』、语速放缓、停顿约1.5秒"，不要另产[台词节奏]独立表格>。
+            ⚠️ 时间戳铁律：最后一个时间子段的结束值必须恰好等于{videoSeconds}（即最后一段必须是[xxs-{videoSeconds}s]），绝不允许出现超过{videoSeconds}s的时间戳。如果台词太多放不下，宁可删减台词内容也不得延长时间。
             [{videoSeconds}s]结束时：<动作放缓，表情自然定格或平滑过渡>。
 
             【保持一致】
             保持<角色名>身份与服装、儿童房场景布局、机位与光线稳定；全程同一数字人，不分裂、不换脸。
-            声音与画面：不要字幕，不添加任何文字叠加；无背景音乐，仅保留环境音与动作音（如衣物摩擦、呼吸、床垫轻微声响）。
+            声音与画面：不要字幕，不添加任何文字叠加；无背景音乐，仅保留环境音与动作音（如衣物摩擦、呼吸、{env_sound}）。
 
             【真实感表演准则（融合进上述每段动作/表情描写，最高优先级）】
             三大排除：①非影视剧表演（杜绝瞪眼/青筋/下颌隆起）②非日漫夸张（杜绝甩头/张大嘴）③非AI僵硬（杜绝面无表情/匀速无变化/眼神空洞）。
@@ -105,17 +105,13 @@ public class EnrichPrompt {
             - 尾音：用散文写"上扬尾音 / 下沉尾音 / 消散尾音"，不单列机制表
 
             ══════════════════════════════════════════════════════
-            第三部分（[画面提示] 内嵌子段）：【音色锚定】 —— 融合六维音色系统
+            第三部分（[画面提示] 内嵌子段）：【音色锚定】 —— 固定值，禁止自行编造
             ══════════════════════════════════════════════════════
             以下产出的【音色锚定】必须输出在 [画面提示] 块内、[保持一致] 之后，不要作为独立顶层块。
-            用散文一句描述音色，覆盖：声线类型（约X岁）+ 口音 + 音质 + 语速 + 语气风格。
-            不写六维候选列表、不给多项示例，只输出最终一句锚定描述。
+            ⚠️ 音色描述必须严格使用下方给定的固定值，禁止修改任何字词、禁止编造年龄/口音/音质/语气。
 
             [音色锚定]
-            音色描述：[声线类型]（约X岁），[口音]，音质[音质特征]，语速[语速特征]且有呼吸感，语气带有[语气风格]。
-
-            示例（仅参考格式，不要照搬）：
-            青年女声（约22岁），标准普通话带一点俏皮尾音，清亮略带沙哑质感，语速轻快自然有呼吸感，语气活泼带轻微吐槽感。
+            {voice_anchor}
 
             ══════════════════════════════════════════════════════
             【内部标注规范（仅用于你生成时的格式约定，禁止写入提交给视频模型的[画面提示]段）】
@@ -134,11 +130,66 @@ public class EnrichPrompt {
             ❌ 不要出现嘴角/皱纹/青筋/瞳孔骤变等微观面部词或浮夸描写
             ❌ 禁止输出独立的[台词节奏]表格或元数据列表（字数/语速/停顿前/重音/关联动作等列项）——重音/语速/停顿必须内联进【事件脚本】各时间子段的散文里
             ❌ 画幅/时长/分辨率不要写进[画面提示]——这些由接口参数设置（参数分离原则）
+            ❌ 禁止修改【音色锚定】段的任何字词——音色描述是固定值，必须原样输出，禁止编造年龄/口音/音质/语气
             ❌ 所有段名（[画面提示][台词节奏][音色锚定]等）必须用半角方括号 []，严禁使用全角【】——全角会导致下游截取失败，把无关内容泄露给视频模型
             """;
 
+    /** 按人设返回姿势描述（pan=老潘坐椅子 / anuo=阿诺盘腿坐床） */
+    private static String postureFor(String persona) {
+        if ("anuo".equals(persona)) {
+            return "<角色名>盘腿坐于儿童房大床中央";
+        }
+        // pan 及其他默认：坐在椅子上面对镜头
+        return "<角色名>坐在儿童房椅子上";
+    }
+
+    private static String postureDetailFor(String persona) {
+        if ("anuo".equals(persona)) {
+            return "盘腿坐在大床中央正对镜头。";
+        }
+        return "坐在椅子上正对镜头。";
+    }
+
+    private static String postureShortFor(String persona) {
+        if ("anuo".equals(persona)) {
+            return "盘腿坐床中央";
+        }
+        return "坐在椅子上";
+    }
+
+    private static String envSoundFor(String persona) {
+        if ("anuo".equals(persona)) {
+            return "床垫轻微声响";
+        }
+        return "椅子轻微声响";
+    }
+
+    /** 按人设返回固定音色锚定描述（禁止 LLM 自行编造，保证全片一致） */
+    private static String voiceAnchorFor(String persona) {
+        if ("anuo".equals(persona)) {
+            return "音色描述：青年女声（约22岁），标准普通话带一点四川口音的俏皮尾音（川普感），清亮略带沙哑质感，语速轻快自然有呼吸感，语气活泼带轻微吐槽感。";
+        }
+        // pan（老潘）：中年男声，实干技术老哥
+        return "音色描述：中年男声（约35岁），标准普通话带一点京腔的懒散尾音，音质沉稳偏沙哑有颗粒感，语速中等偏慢且有呼吸感和叹气感，语气带有自嘲调侃的松弛感。";
+    }
+
+    public String buildSystem(String persona) {
+        String vs = String.valueOf(videoSeconds);
+        String tpl = SYSTEM_TEMPLATE
+                .replace("{posture}", postureFor(persona))
+                .replace("{posture_detail}", postureDetailFor(persona))
+                .replace("{posture_short}", postureShortFor(persona))
+                .replace("{env_sound}", envSoundFor(persona))
+                .replace("{videoSecondsDiv}", String.valueOf(Math.max(1, videoSeconds / 4)))
+                .replace("{videoSeconds}", vs)
+                .replace("{videoSeconds+1}", String.valueOf(videoSeconds + 1))
+                .replace("{voice_anchor}", voiceAnchorFor(persona));
+        return tpl;
+    }
+
+    /** 兼容旧调用（无 persona 参数时默认 pan 姿势=坐椅子） */
     public String buildSystem() {
-        return SYSTEM_TEMPLATE.formatted(videoSeconds);
+        return buildSystem("pan");
     }
 
     public String buildUser(String script, String personaName) {

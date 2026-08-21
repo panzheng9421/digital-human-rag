@@ -7,6 +7,8 @@ import com.view163.digitalhuman.service.ScriptGenerator;
 import com.view163.digitalhuman.service.ScriptSlicer;
 import com.view163.digitalhuman.service.VideoConcatenator;
 import com.view163.digitalhuman.service.VideoGenService;
+import com.view163.digitalhuman.service.GrokVideoGenService;
+import com.view163.digitalhuman.service.VideoGenerator;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -27,7 +29,7 @@ public class DemoApplication {
 
     @Bean
     CommandLineRunner runner(ScriptGenerator generator, PerformanceEnricher enricher,
-                             VideoGenService videoGen, VideoConcatenator concatenator,
+                             VideoGenerator videoGen, VideoConcatenator concatenator,
                              ScriptSlicer slicer, AppProperties props, EnrichPrompt enrichPrompt) {
         return args -> {
             String persona = props.getPersona();
@@ -73,10 +75,10 @@ public class DemoApplication {
             for (int i = 0; i < slices.size(); i++) {
                 String seg = slices.get(i);
                 String segContext = buildSegmentContext(i, slices.size(), seg, prevTail);
-                String segEnriched = enricher.enrich(segContext, personaName);
+                String segEnriched = enricher.enrich(segContext, personaName, persona);
                 String segVisual = enrichPrompt.extractVisual(segEnriched);
                 String segPrompt = segVisual + "\n\n[台词]\n" + seg;
-                System.out.println("\n--- [Stage3] 片段 " + (i + 1) + "/" + slices.size() + " 发给 Seedance 的 prompt ---\n" + segPrompt);
+                System.out.println("\n--- [Stage3] 片段 " + (i + 1) + "/" + slices.size() + " 发给视频引擎的 prompt ---\n" + segPrompt);
 
                 Path segFile = outDir.resolve(String.format("seg_%02d.mp4", i + 1));
                 String segMp4;
@@ -114,6 +116,19 @@ public class DemoApplication {
                 System.out.println("\n--- [Stage4] 视频已拼接（共 " + segPaths.size() + " 段）---\n" + finalMp4);
             }
         };
+    }
+
+    /** 引擎工厂：按 app.video.provider 选择出片实现（seedance 默认 / grok）。 */
+    @Bean
+    VideoGenerator videoGenerator(AppProperties props) {
+        String provider = props.getVideo().getProvider();
+        String persona = props.getPersona();
+        if ("grok".equalsIgnoreCase(provider)) {
+            System.out.println("[引擎] 使用 Grok（grok-imagine-video-1.5）出片");
+            return new GrokVideoGenService(props, persona);
+        }
+        System.out.println("[引擎] 使用 Seedance（new.xlcsh.top 中转）出片");
+        return new VideoGenService(props, persona);
     }
 
     /** 给每段富化补充分段上下文，让 LLM 知道是第几段、承接上文，缓解跨段跳变 */

@@ -19,8 +19,9 @@ public class PerformanceEnricher {
         this.enrichPrompt = enrichPrompt;
     }
 
-    /** 返回完整富化文本（含 [画面提示][台词节奏][音色锚定]） */
-    public String enrich(String script, String personaName) {
-        return llm.chat(enrichPrompt.buildSystem(), enrichPrompt.buildUser(script, personaName));
+    /** 返回完整富化文本（含 [画面提示][台词节奏][音色锚定]）
+     * @param persona 英文人设ID（pan/anuo），用于选择姿势等差异化模板 */
+    public String enrich(String script, String personaName, String persona) {
+        return llm.chat(enrichPrompt.buildSystem(persona), enrichPrompt.buildUser(script, personaName));
     }
 }
