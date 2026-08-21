@@ -13,7 +13,7 @@ import java.util.List;
  * 三级切片策略：
  *   1) 优先在主标点（。！？；\n）处断句
  *   2) 单句超 maxChars 时，在次级标点（，、：——）处强制截断
- *   3) 结果 < maxChars×0.4（过短）时，贪心合并下一段，避免 5s 视频只说 4 个字
+ *   3) 结果 < maxChars×0.65（过短）时，贪心合并下一段，避免视频大半静默
  *
  * 英文保护：硬切时自动回溯到单词边界，不会把 seedream 切成 seedre/am、
  *   text-embedding 切成 embedding/-v3
@@ -22,7 +22,7 @@ import java.util.List;
 public class ScriptSlicer {
 
     private static final int CHARS_PER_SECOND = 5;  // 口播语速 ~300 字/分（稍快时自然语速）
-    private static final double MIN_FILL_RATIO = 0.4;  // 段最短不低于上限的 40%
+    private static final double MIN_FILL_RATIO = 0.65;  // 段最短不低于上限的 65%（避免10s视频只说20个字）
 
     /** 主标点：自然断句位置 */
     private static final String PRIMARY_DELIMS = "。！？；\n";
@@ -36,7 +36,7 @@ public class ScriptSlicer {
         int seconds = props.getVideo().getSeconds();
         // seconds 异常（≤0）时兜底 120 字（≈30s），避免除零/负数导致整稿变一段
         this.maxChars = seconds > 0 ? seconds * CHARS_PER_SECOND : 120;
-        this.minChars = (int) Math.max(8, Math.round(maxChars * MIN_FILL_RATIO));
+        this.minChars = (int) Math.max(15, Math.round(maxChars * MIN_FILL_RATIO));
     }
 
     public List<String> slice(String script) {
@@ -64,7 +64,7 @@ public class ScriptSlicer {
             result.add(buf.toString().trim());
         }
 
-        // Step 3: 后处理 —— 过短段（非末段）与下一段合并
+        // Step 3: 后处理 —— 过短段（非末段）与下一段合并；末段过短则向上并入倒数第二段
         return mergeShortSegments(result);
     }
 
@@ -163,6 +163,9 @@ public class ScriptSlicer {
     /**
      * 从头扫描，若某段（非最后一段）长度 < minChars，
      * 则与下一段合并。重复直到所有非末段都 ≥ minChars。
+     *
+     * 末段特殊处理：如果末段长度 < minChars 且总段数 > 1，
+     * 则将末段向上合并到倒数第二段（避免"下期见。嘘。"这种 4 字尾巴单独成一段 30s 视频）。
      */
     private List<String> mergeShortSegments(List<String> segments) {
         if (segments.size() <= 1) {
@@ -175,7 +178,7 @@ public class ScriptSlicer {
             List<String> next = new ArrayList<>();
             for (int i = 0; i < merged.size(); i++) {
                 String seg = merged.get(i);
-                // 最后一段不参与合并（没有下一段可合）
+                // 最后一段不参与向下合并（没有下一段可合）
                 if (i == merged.size() - 1) {
                     next.add(seg);
                     continue;
@@ -192,6 +195,17 @@ public class ScriptSlicer {
             }
             merged = next;
         } while (changed);  // 合并后可能产生新的短段（两短合一变中），继续扫
+
+        // 末段过短保护：向上并入倒数第二段
+        if (merged.size() >= 2) {
+            String last = merged.get(merged.size() - 1);
+            if (last.length() < minChars) {
+                String penultimate = merged.get(merged.size() - 2);
+                merged.set(merged.size() - 2, penultimate + last);
+                merged.remove(merged.size() - 1);
+            }
+        }
+
         return merged;
     }
 }

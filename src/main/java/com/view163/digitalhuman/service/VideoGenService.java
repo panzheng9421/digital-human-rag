@@ -39,6 +39,8 @@ public class VideoGenService {
     private final List<String> referenceImageUrls;
     private final int seconds;
     private final String size;
+    private final String outputDir;
+    private final int retryAttempts;
 
     private final ObjectMapper mapper = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -54,15 +56,49 @@ public class VideoGenService {
         this.referenceImageUrls = v.getReferenceImageUrls() == null ? List.of() : v.getReferenceImageUrls();
         this.seconds = v.getSeconds();
         this.size = v.getSize();
+        this.outputDir = v.getOutputDir();
+        this.retryAttempts = Math.max(0, v.getRetryAttempts());
     }
 
-    /** 完整流程：提交 -> 轮询 -> 下载，返回本地 mp4 绝对路径 */
-    public String generate(String visualPrompt) throws Exception {
-        String taskId = submit(visualPrompt);
-        System.out.println("[视频] 已提交任务：" + taskId);
-        String videoUrl = waitForCompletion(taskId);
-        System.out.println("[视频] 生成完成：" + videoUrl);
-        return download(videoUrl);
+    /**
+     * 完整流程（单切片，带重试 + 确定性命名）：提交 -> 轮询 -> 下载 -> 落盘 seg_XX.mp4。
+     * segIndex>0 时用确定性文件名（支持断点续跑）；segIndex<=0 时回退随机名。
+     * 失败时按 retryAttempts 重试（指数退避），全部失败才向上抛，由调用方决定是否跳过该切片。
+     */
+    public String generate(String visualPrompt, int segIndex, int total) throws Exception {
+        Path outDir = Paths.get(outputDir);
+        Files.createDirectories(outDir);
+        String baseName = segIndex > 0
+                ? String.format("seg_%02d.mp4", segIndex)
+                : ("output_" + java.util.UUID.randomUUID().toString().substring(0, 8) + ".mp4");
+        Path target = outDir.resolve(baseName);
+        Path tmp = outDir.resolve(baseName + ".part");
+
+        int attempts = retryAttempts + 1;
+        Exception last = null;
+        for (int a = 0; a < attempts; a++) {
+            try {
+                String taskId = submit(visualPrompt);
+                System.out.println("[视频] 片段 " + segIndex + "/" + total + " 已提交任务：" + taskId
+                        + (attempts > 1 ? "（第 " + (a + 1) + "/" + attempts + " 次尝试）" : ""));
+                String videoUrl = waitForCompletion(taskId);
+                System.out.println("[视频] 片段 " + segIndex + " 生成完成，下载中…");
+                download(videoUrl, tmp);
+                // 先写临时文件，成功后再原子改名，避免续跑时把半截文件当成已完成
+                Files.move(tmp, target, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                return target.toAbsolutePath().toString();
+            } catch (Exception e) {
+                last = e;
+                System.out.println("[视频] 片段 " + segIndex + " 第 " + (a + 1) + " 次尝试失败：" + e.getMessage());
+                try { Files.deleteIfExists(tmp); } catch (Exception ignore) { }
+                if (a < attempts - 1) {
+                    long backoff = 5000L * (a + 1);
+                    System.out.println("[视频] 片段 " + segIndex + " " + (backoff / 1000) + "s 后重试…");
+                    Thread.sleep(backoff);
+                }
+            }
+        }
+        throw last != null ? last : new RuntimeException("片段 " + segIndex + " 出片失败");
     }
 
     private String submit(String visualPrompt) throws Exception {
@@ -120,7 +156,8 @@ public class VideoGenService {
 
     private String waitForCompletion(String taskId) throws Exception {
         String url = baseUrl + "/" + taskId;
-        int maxTries = 400; // 3s × 400 ≈ 20 分钟上限，覆盖 30s 长视频
+        // 超时随视频时长自适应：约 seconds×12 次轮询（3s/次 ≈ seconds×36s），下限 60 次兜底 5s 片段
+        int maxTries = seconds <= 0 ? 400 : Math.max(60, seconds * 12);
         for (int i = 0; i < maxTries; i++) {
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(url))
@@ -154,7 +191,7 @@ public class VideoGenService {
             }
             Thread.sleep(3000);
         }
-        throw new RuntimeException("视频生成超时（超过约 20 分钟）");
+        throw new RuntimeException("视频生成超时（约 " + (maxTries * 3 / 60) + " 分钟仍未完成）");
     }
 
     private String findVideoUrl(JsonNode data) {
@@ -172,7 +209,7 @@ public class VideoGenService {
         return null;
     }
 
-    private String download(String videoUrl) throws Exception {
+    private void download(String videoUrl, Path target) throws Exception {
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(videoUrl))
                 .GET()
@@ -181,10 +218,7 @@ public class VideoGenService {
         if (resp.statusCode() != 200) {
             throw new RuntimeException("下载视频失败 HTTP " + resp.statusCode());
         }
-        String name = "output_" + java.util.UUID.randomUUID().toString().substring(0, 8) + ".mp4";
-        Path out = Paths.get(name);
-        Files.write(out, resp.body());
-        return out.toAbsolutePath().toString();
+        Files.write(target, resp.body());
     }
 
     /** 判断 New API 响应是否为错误：含 error 字段 / code 为错误串 => 失败 */

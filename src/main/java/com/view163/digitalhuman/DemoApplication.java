@@ -12,6 +12,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,20 +28,31 @@ public class DemoApplication {
     @Bean
     CommandLineRunner runner(ScriptGenerator generator, PerformanceEnricher enricher,
                              VideoGenService videoGen, VideoConcatenator concatenator,
-                             ScriptSlicer slicer, AppProperties props) {
+                             ScriptSlicer slicer, AppProperties props, EnrichPrompt enrichPrompt) {
         return args -> {
             String persona = props.getPersona();
-            String personaName = "amei".equalsIgnoreCase(persona) ? "阿妹" : "老潘";
+            String personaName = "anuo".equalsIgnoreCase(persona) ? "阿诺" : "老潘";
             String docsDir = props.getDocsDir() + "/" + persona;
-            String topic = args.length > 0 ? String.join(" ", args) : "做一下自我介绍";
-            System.out.println("=== 数字分身全流程（稿 -> 富化 -> 切片 -> 出片 -> 拼接）===");
-            System.out.println("人设：" + persona + "（知识库：" + docsDir + "）");
-            System.out.println("主题：" + topic);
 
-            // Stage1：RAG 生成裸口播稿
-            generator.buildKnowledgeBase(docsDir);
-            String script = generator.generate(topic, persona);
-            System.out.println("\n--- [Stage1] 裸口播稿 ---\n" + script);
+            // 入口分支：--raw=口播稿 或 --raw-file=路径 => 直接输入裸稿，跳过 Stage1 RAG 写稿
+            String raw = parseRawScript(args);
+            String script;
+            if (raw != null) {
+                script = raw;
+                System.out.println("=== 数字分身（直接输入裸口播稿，跳过 Stage1 RAG 写稿）===");
+                System.out.println("人设：" + persona);
+                System.out.println("\n--- [Stage1] 裸口播稿（直接输入）---\n" + script);
+            } else {
+                String topic = args.length > 0 ? String.join(" ", args) : "做一下自我介绍";
+                System.out.println("=== 数字分身全流程（稿 -> 富化 -> 切片 -> 出片 -> 拼接）===");
+                System.out.println("人设：" + persona + "（知识库：" + docsDir + "）");
+                System.out.println("主题：" + topic);
+
+                // Stage1：RAG 生成裸口播稿
+                generator.buildKnowledgeBase(docsDir);
+                script = generator.generate(topic, persona);
+                System.out.println("\n--- [Stage1] 裸口播稿 ---\n" + script);
+            }
 
             // Stage1.5：切片（每段 ≤ video.seconds 对应字数，在句号边界封口，粒度随 seconds 联动）
             List<String> slices = slicer.slice(script);
@@ -48,25 +62,52 @@ public class DemoApplication {
             }
 
             // Stage2+3 逐段：表演富化 -> 出片（画面提示 + 本段口播稿）
+            // 容错 + 断点续跑：切片视频落盘为确定性文件名 seg_XX.mp4；
+            //   - 已存在则跳过出片（续跑）；
+            //   - 出片抛异常（含重试耗尽）则记日志、跳过该段、继续后续切片，绝不拖垮整批。
+            Path outDir = Paths.get(props.getVideo().getOutputDir());
+            Files.createDirectories(outDir);
             List<String> segPaths = new ArrayList<>();
             String prevTail = "";
+            int failed = 0;
             for (int i = 0; i < slices.size(); i++) {
                 String seg = slices.get(i);
                 String segContext = buildSegmentContext(i, slices.size(), seg, prevTail);
                 String segEnriched = enricher.enrich(segContext, personaName);
-                String segVisual = EnrichPrompt.extractVisual(segEnriched);
+                String segVisual = enrichPrompt.extractVisual(segEnriched);
                 String segPrompt = segVisual + "\n\n[台词]\n" + seg;
-                System.out.println("\n--- [Stage3] 片段 " + (i + 1) + " 发给 Seedance 的 prompt ---\n" + segPrompt);
-                String segMp4 = videoGen.generate(segPrompt);
+                System.out.println("\n--- [Stage3] 片段 " + (i + 1) + "/" + slices.size() + " 发给 Seedance 的 prompt ---\n" + segPrompt);
+
+                Path segFile = outDir.resolve(String.format("seg_%02d.mp4", i + 1));
+                String segMp4;
+                if (Files.exists(segFile)) {
+                    System.out.println("[续跑] 片段 " + (i + 1) + " 已存在，跳过出片：" + segFile.toAbsolutePath());
+                    segMp4 = segFile.toAbsolutePath().toString();
+                } else {
+                    try {
+                        segMp4 = videoGen.generate(segPrompt, i + 1, slices.size());
+                    } catch (Exception e) {
+                        failed++;
+                        System.out.println("[警告] 片段 " + (i + 1) + " 出片失败，跳过后续重试交由下轮续跑：" + e.getMessage());
+                        prevTail = tailOf(seg);
+                        continue;
+                    }
+                }
                 System.out.println("\n--- [Stage3] 片段 " + (i + 1) + " 视频已生成 ---\n" + segMp4);
                 segPaths.add(segMp4);
                 prevTail = tailOf(seg);
             }
 
-            // Stage4：拼接（单段跳过）
+            // Stage4：拼接（单段跳过；失败片段不参与，仅拼已成功片段）
+            if (failed > 0) {
+                System.out.println("\n[汇总] 共 " + slices.size() + " 段，成功 " + segPaths.size() + " 段，失败 " + failed + " 段（重跑可续跑补齐）");
+            }
             String finalMp4;
-            if (segPaths.size() <= 1) {
-                finalMp4 = segPaths.isEmpty() ? "" : segPaths.get(0);
+            if (segPaths.isEmpty()) {
+                finalMp4 = "";
+                System.out.println("\n--- [Stage4] 无成功片段，未生成视频 ---");
+            } else if (segPaths.size() <= 1) {
+                finalMp4 = segPaths.get(0);
                 System.out.println("\n--- [Stage4] 单段无需拼接 ---\n" + finalMp4);
             } else {
                 finalMp4 = concatenator.concat(segPaths);
@@ -93,5 +134,28 @@ public class DemoApplication {
         if (seg == null || seg.isEmpty()) return "";
         int start = Math.max(0, seg.length() - 15);
         return seg.substring(start);
+    }
+
+    /**
+     * 入口解析：检测是否直接输入裸口播稿（跳过 Stage1）。
+     *   --raw=整段口播稿            命令行内联，适合短稿（含空格需引号包裹）
+     *   --raw-file=/path/script.txt 从文件读取，适合长稿（支持换行）
+     * 命中返回稿子；否则返回 null（走原 RAG 流程）。
+     */
+    private static String parseRawScript(String[] args) {
+        for (String a : args) {
+            if (a.startsWith("--raw-file=")) {
+                String p = a.substring("--raw-file=".length());
+                try {
+                    return Files.readString(Paths.get(p)).strip();
+                } catch (Exception e) {
+                    throw new RuntimeException("读取裸口播稿文件失败：" + p, e);
+                }
+            }
+            if (a.startsWith("--raw=")) {
+                return a.substring("--raw=".length());
+            }
+        }
+        return null;
     }
 }

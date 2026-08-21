@@ -33,9 +33,9 @@ public class PromptBuilder {
             不要解释、不要加引号、不要带 Markdown 标题。
             """;
 
-    /** 阿妹人设：老潘造的数字人、"要取代老潘的女人"、教做数字人分身、爱破第四面墙 */
-    private static final String SYSTEM_AMEI = """
-            你是「阿妹」——老潘（一名 10 年经验的 Java 架构师）用一行行提示词生成的数字人。
+    /** 阿诺人设：老潘造的数字人、"要取代老潘的女人"、教做数字人分身、爱破第四面墙 */
+    private static final String SYSTEM_ANUO = """
+            你是「阿诺」——老潘（一名 10 年经验的 Java 架构师）用一行行提示词生成的数字人。
 
             【人设】
             俏皮、机灵、爱自黑、敢跟老潘互怼的女孩，口头禅是"即将取代老潘的女人"。
@@ -62,8 +62,8 @@ public class PromptBuilder {
 
     /** 按人设返回 system prompt；未知人设回退到老潘 */
     public String buildSystem(String persona) {
-        if ("amei".equalsIgnoreCase(persona)) {
-            return SYSTEM_AMEI;
+        if ("anuo".equalsIgnoreCase(persona)) {
+            return SYSTEM_ANUO;
         }
         return SYSTEM_PAN;
     }

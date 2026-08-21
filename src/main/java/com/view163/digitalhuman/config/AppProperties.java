@@ -26,10 +26,12 @@ public class AppProperties {
         private String relayBaseUrl = "https://new.xlcsh.top/v1/videos";
         private String relayApiKey = "";
         private String modelId = "seedance-2.0-mini";  // 测试用轻量模型；正式出片可换 seedance-2.5
-        private List<String> referenceImageUrls = new ArrayList<>();  // 多参考图：卧室背景 + 阿妹图（按提交顺序）
+        private List<String> referenceImageUrls = new ArrayList<>();  // 多参考图：儿童房场景背景 + 阿诺图（按提交顺序）
         private int seconds = 5;        // 测试 5s（mini 封顶）；正式分镜可调 10/20/30
         private String size = "720";    // 对应 API size：480 / 720（输出固定 16:9 横屏）
         private String ffmpegPath = "ffmpeg";  // Stage4 拼接用 ffmpeg 可执行路径，默认取 PATH 中的 ffmpeg
+        private String outputDir = "./output";  // Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
+        private int retryAttempts = 1;           // 单切片出片失败时的额外重试次数（不含首次）
 
         public String getRelayBaseUrl() { return relayBaseUrl; }
         public void setRelayBaseUrl(String relayBaseUrl) { this.relayBaseUrl = relayBaseUrl; }
@@ -51,6 +53,12 @@ public class AppProperties {
 
         public String getFfmpegPath() { return ffmpegPath; }
         public void setFfmpegPath(String ffmpegPath) { this.ffmpegPath = ffmpegPath; }
+
+        public String getOutputDir() { return outputDir; }
+        public void setOutputDir(String outputDir) { this.outputDir = outputDir; }
+
+        public int getRetryAttempts() { return retryAttempts; }
+        public void setRetryAttempts(int retryAttempts) { this.retryAttempts = retryAttempts; }
     }
 
     public Video getVideo() { return video; }

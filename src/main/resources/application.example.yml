@@ -7,7 +7,7 @@ app:
   dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
   deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
   docs-dir: ./src/main/resources/docs   # 知识库根目录；实际加载 docs/{persona} 子目录
-  persona: pan        # 人设：pan（老潘）/ amei（阿妹）；决定用哪套 prompt 与哪个知识库
+  persona: pan        # 人设：pan（老潘）/ anuo（阿诺）；决定用哪套 prompt 与哪个知识库
   top-k: 3            # 检索召回的片段数
   dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
   temperature: 0.7    # 生成随机度
@@ -19,7 +19,7 @@ app:
     relay-api-key: ${RELAY_API_KEY:sk-请替换为中转站key}
     model-id: seedance-2.0-mini   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
     # 多参考图：公网可访问的 HTTPS URL，YAML 列表格式（每项一个 URL），按提交顺序传给上游。
-    # 固定 3 张：1 张卧室背景图 + 2 张阿妹图（提升人物与场景一致性）。
+    # 固定 3 张：1 张儿童房场景背景图 + 2 张阿诺图（提升人物与场景一致性）。
     # 注意：必须是未登录即可直接返回图片的 URL，勿用网页预览地址/临时登录链接/本地路径。
     reference-image-urls:
       - https://img.triview.cn/ai/4.png
@@ -27,4 +27,6 @@ app:
       - https://img.triview.cn/ai/bedroom.jpg
     seconds: 5         # 切片粒度与视频时长联动（ScriptSlicer 按 seconds×4 字切片）；mini 支持 5/10s
     size: 720          # 480 / 720（输出比例固定 16:9 横屏，size 不切换横竖屏）
+    output-dir: ./output          # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
+    retry-attempts: 1             # 单切片出片失败时的额外重试次数（不含首次）
     ffmpeg-path: ffmpeg  # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe

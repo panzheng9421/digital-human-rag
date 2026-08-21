@@ -54,10 +54,10 @@
 cd rag
 mvn spring-boot:run                 # 默认人设=pan（老潘），默认主题
 mvn spring-boot:run -Dspring-boot.run.arguments="怎么用数字人做课程"          # 自定义主题
-mvn spring-boot:run -Dapp.persona=amei -Dspring-boot.run.arguments="怎么做数字人分身"  # 切阿妹人设
+mvn spring-boot:run -Dapp.persona=anuo -Dspring-boot.run.arguments="怎么做数字人分身"  # 切阿诺人设
 ```
 
-`app.persona` 决定用哪套 prompt 与哪个知识库（加载 `docs/{persona}` 下的 `.md`）。可选值：`pan`（老潘，默认）/ `amei`（阿妹）。
+`app.persona` 决定用哪套 prompt 与哪个知识库（加载 `docs/{persona}` 下的 `.md`）。可选值：`pan`（老潘，默认）/ `anuo`（阿诺）。
 
 首次启动会自动加载对应人设 `docs/{persona}/` 下所有 `.md`，切片并向量化进内存，然后针对主题生成口播稿并打印到控制台。
 
@@ -79,7 +79,7 @@ rag/
 └─ src/main/resources/
    ├─ docs/
    │  ├─ pan/                     # 老潘知识库（包子店稿 / Agent 落地稿 / 扣子种草 / 剪映吐槽）
-   │  └─ amei/                    # 阿妹知识库（数字人分身制作揭秘）
+   │  └─ anuo/                    # 阿诺知识库（数字人分身制作揭秘）
    ├─ application.example.yml     # 配置模板（入库）
    └─ application.yml             # 真实配置（不入库，需自己建）
 ```
