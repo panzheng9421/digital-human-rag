@@ -23,7 +23,7 @@ app:
     size: 720                   # 480 / 720 / 1080
     output-dir: ./output        # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
     retry-attempts: 1           # 单切片出片失败时的额外重试次数（不含首次）
-    ratio: 16:9                 # 输出比例（方舟专用）：16:9 / 4:3 / 1:1 / 3:4 / 9:16 / 21:9 / adaptive
+    ratio: "16:9"               # 输出比例（方舟专用）：16:9 / 9:16 / 1:1 / adaptive；⚠️ 必须加引号，否则 YAML 会把 16:9 当六十进制数字解析成 969，方舟报 InvalidParameter
     generate-audio: false       # 是否由模型生成配音（方舟专用）
     ffmpeg-path: ffmpeg         # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
     reference-image-urls:

@@ -35,3 +35,6 @@ reference/*.jpg
 reference/*.PNG
 reference/*.JPEG
 reference/*.JPG
+
+# 出片产物（Stage3/Stage4 落盘的 mp4，体积大且可重生成，不进仓库）
+output/

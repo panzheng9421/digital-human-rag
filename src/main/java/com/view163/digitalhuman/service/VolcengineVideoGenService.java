@@ -221,7 +221,8 @@ public class VolcengineVideoGenService implements VideoGenerator {
     }
 
     private String findVideoUrl(JsonNode root) {
-        String[] paths = {"video_url", "data.video_url", "url", "data.url"};
+        // 方舟 2.5 把视频地址放在 content.video_url（content 对象内），优先匹配；其余为兼容旧/其它结构
+        String[] paths = {"content.video_url", "content.url", "video_url", "data.video_url", "url", "data.url"};
         for (String p : paths) {
             JsonNode n = root;
             for (String seg : p.split("\\.")) {
