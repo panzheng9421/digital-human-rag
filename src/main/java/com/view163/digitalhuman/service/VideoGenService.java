@@ -49,9 +49,10 @@ public class VideoGenService implements VideoGenerator {
 
     public VideoGenService(AppProperties props, String persona) {
         AppProperties.Video v = props.getVideo();
-        this.baseUrl = v.getRelayBaseUrl();
-        this.apiKey = v.getRelayApiKey();
-        this.modelId = v.getModelId();
+        AppProperties.Video.Seedance s = v.getSeedance();
+        this.baseUrl = s.getBaseUrl();
+        this.apiKey = s.getApiKey();
+        this.modelId = s.getModelId();
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
         this.seconds = v.getSeconds();
         this.size = v.getSize();

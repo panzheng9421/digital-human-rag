@@ -47,17 +47,18 @@ public class GrokVideoGenService implements VideoGenerator {
 
     public GrokVideoGenService(AppProperties props, String persona) {
         AppProperties.Video v = props.getVideo();
+        AppProperties.Video.Grok g = v.getGrok();
         String envKey = System.getenv("XAI_API_KEY");
-        this.apiKey = (v.getGrokApiKey() != null && !v.getGrokApiKey().isEmpty())
-                ? v.getGrokApiKey() : (envKey != null ? envKey : "");
-        this.modelId = v.getModelId();   // Grok 默认 grok-imagine-video-1.5，可在 yml 覆盖
+        this.apiKey = (g.getApiKey() != null && !g.getApiKey().isEmpty())
+                ? g.getApiKey() : (envKey != null ? envKey : "");
+        this.modelId = "grok-imagine-video-1.5";   // Grok 视频模型固定
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
-        this.referenceAudioIds = v.getReferenceAudioIds() == null ? List.of() : v.getReferenceAudioIds();
+        this.referenceAudioIds = g.getReferenceAudioIds() == null ? List.of() : g.getReferenceAudioIds();
         this.seconds = Math.min(v.getSeconds(), 15);   // Grok 上限 15s
         this.resolution = toResolution(v.getSize());
         this.outputDir = v.getOutputDir();
         this.retryAttempts = Math.max(0, v.getRetryAttempts());
-        String cfgBase = v.getGrokBaseUrl();
+        String cfgBase = g.getBaseUrl();
         this.baseUrl = (cfgBase != null && !cfgBase.isEmpty()) ? cfgBase : "https://api.x.ai";
         System.out.println("[Grok INIT] baseUrl=" + this.baseUrl + " model=" + modelId
                 + " seconds=" + this.seconds + " refImages=" + this.referenceImageUrls.size()
@@ -164,12 +165,16 @@ public class GrokVideoGenService implements VideoGenerator {
         // 超时随视频时长自适应：约 seconds×12 次轮询（3s/次），下限 60 次兜底
         int maxTries = Math.max(60, seconds * 12);
         for (int i = 0; i < maxTries; i++) {
+            String pollUrl = baseUrl + "/v1/videos/" + requestId;
             HttpRequest req = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl + "/v1/videos/" + requestId))
+                    .uri(URI.create(pollUrl))
                     .header("Authorization", "Bearer " + apiKey)
                     .GET()
                     .build();
             HttpResponse<String> resp = http.send(req, HttpResponse.BodyHandlers.ofString());
+            System.out.println("[Grok POLL DEBUG #" + (i + 1) + "] GET " + pollUrl);
+            System.out.println("[Grok POLL DEBUG #" + (i + 1) + "] HTTP " + resp.statusCode());
+            System.out.println("[Grok POLL DEBUG #" + (i + 1) + "] body=\n" + resp.body());
             if (resp.statusCode() < 200 || resp.statusCode() >= 300) {
                 throw new RuntimeException("查询 Grok 任务 HTTP " + resp.statusCode() + "：" + resp.body());
             }
@@ -185,8 +190,15 @@ public class GrokVideoGenService implements VideoGenerator {
             }
             if ("done".equals(s)) {
                 JsonNode video = payload.get("video");
-                if (video != null && video.has("url")) {
-                    return video.get("url").asText();
+                if (video != null) {
+                    // 官方直连时 video.url 是完整 URL；中转站返回相对路径需补全 baseUrl
+                    if (video.has("url")) {
+                        String url = video.get("url").asText();
+                        if (url != null && !url.isEmpty() && !url.startsWith("http")) {
+                            url = baseUrl + url;   // 中转站返回 /v1/videos/{id}/content → 补全为完整下载地址
+                        }
+                        return url;
+                    }
                 }
             }
             Thread.sleep(3000);
@@ -195,14 +207,45 @@ public class GrokVideoGenService implements VideoGenerator {
     }
 
     private void download(String videoUrl, Path target) throws Exception {
+        System.out.println("[Grok DOWNLOAD DEBUG] GET " + videoUrl);
         HttpRequest req = HttpRequest.newBuilder()
                 .uri(URI.create(videoUrl))
+                .header("Authorization", "Bearer " + apiKey)
                 .GET()
                 .build();
         HttpResponse<byte[]> resp = http.send(req, HttpResponse.BodyHandlers.ofByteArray());
+        System.out.println("[Grok DOWNLOAD DEBUG] HTTP " + resp.statusCode()
+                + " content-type=" + resp.headers().firstValue("Content-Type").orElse("?")
+                + " bytes=" + resp.body().length);
         if (resp.statusCode() != 200) {
             throw new RuntimeException("下载 Grok 视频失败 HTTP " + resp.statusCode());
         }
-        Files.write(target, resp.body());
+        byte[] data = resp.body();
+        // 防御：若 /content 返回的是 JSON（含真正 mp4 地址），再解析一级后二次下载
+        String ct = resp.headers().firstValue("Content-Type").orElse("");
+        if (ct.contains("json") || (data.length > 0 && data[0] == '{')) {
+            try {
+                JsonNode j = mapper.readTree(data);
+                String real = j.has("url") ? j.get("url").asText("")
+                        : (j.has("video_url") ? j.get("video_url").asText("") : "");
+                if (real != null && !real.isEmpty() && !real.startsWith("http")) real = baseUrl + real;
+                if (!real.isEmpty()) {
+                    System.out.println("[Grok DOWNLOAD DEBUG] 检测到 JSON 包裹，二次下载：" + real);
+                    HttpRequest req2 = HttpRequest.newBuilder()
+                            .uri(URI.create(real))
+                            .header("Authorization", "Bearer " + apiKey)
+                            .GET()
+                            .build();
+                    HttpResponse<byte[]> resp2 = http.send(req2, HttpResponse.BodyHandlers.ofByteArray());
+                    if (resp2.statusCode() != 200) {
+                        throw new RuntimeException("二次下载 Grok 视频失败 HTTP " + resp2.statusCode());
+                    }
+                    data = resp2.body();
+                }
+            } catch (Exception e) {
+                // 不是 JSON，按原始字节处理
+            }
+        }
+        Files.write(target, data);
     }
 }

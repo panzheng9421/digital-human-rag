@@ -8,6 +8,7 @@ import com.view163.digitalhuman.service.ScriptSlicer;
 import com.view163.digitalhuman.service.VideoConcatenator;
 import com.view163.digitalhuman.service.VideoGenService;
 import com.view163.digitalhuman.service.GrokVideoGenService;
+import com.view163.digitalhuman.service.VolcengineVideoGenService;
 import com.view163.digitalhuman.service.VideoGenerator;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -126,6 +127,10 @@ public class DemoApplication {
         if ("grok".equalsIgnoreCase(provider)) {
             System.out.println("[引擎] 使用 Grok（grok-imagine-video-1.5）出片");
             return new GrokVideoGenService(props, persona);
+        }
+        if ("volcengine".equalsIgnoreCase(provider)) {
+            System.out.println("[引擎] 使用火山方舟 Seedance 2.5（官方直连）出片");
+            return new VolcengineVideoGenService(props, persona);
         }
         System.out.println("[引擎] 使用 Seedance（new.xlcsh.top 中转）出片");
         return new VideoGenService(props, persona);
