@@ -38,12 +38,18 @@ import java.util.Map;
  *   asset://<asset_id> 传入（url 字段直接支持，代码结构无需改动）。
  *   普通非人脸参考图（如场景背景 bedroom-night.png）仍可传外部 http(s) URL。
  *   详见：https://www.volcengine.com/docs/82379/2315856（录入真人形象素材）
+ *
+ * 真人音色（参考音频，同通道）：
+ *   在 content[] 追加 {type:audio_url, audio_url:{url:"asset://<audio_asset_id>"}, role:reference_audio}
+ *   即可锁定真人音色+口型；音频素材 ID 同样从方舟「素材&虚拟人像库」获取（asset:// 格式）。
+ *   见官方「创建视频生成任务」文档：https://www.volcengine.com/docs/6390/1393047
  */
 public class VolcengineVideoGenService implements VideoGenerator {
 
     private final String apiKey;
     private final String modelId;
     private final List<String> referenceImageUrls;
+    private final List<String> referenceAudioUrls;
     private final int seconds;
     private final String resolution;   // 480p/720p/1080p/4k
     private final String ratio;        // 16:9 等
@@ -66,6 +72,7 @@ public class VolcengineVideoGenService implements VideoGenerator {
                 ? volc.getApiKey() : (envKey != null ? envKey : "");
         this.modelId = volc.getModelId();   // 默认 doubao-seedance-2-5
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
+        this.referenceAudioUrls = v.getReferenceAudioUrlsFor(persona);
         this.seconds = v.getSeconds();
         this.resolution = toResolution(v.getSize());
         this.ratio = v.getRatio();
@@ -78,6 +85,7 @@ public class VolcengineVideoGenService implements VideoGenerator {
         System.out.println("[Volc INIT] baseUrl=" + this.baseUrl + " model=" + modelId
                 + " seconds=" + this.seconds + " resolution=" + this.resolution + " ratio=" + this.ratio
                 + " generateAudio=" + this.generateAudio + " refImages=" + this.referenceImageUrls.size()
+                + " refAudio=" + this.referenceAudioUrls.size()
                 + " retries=" + this.retryAttempts);
     }
 
@@ -144,13 +152,30 @@ public class VolcengineVideoGenService implements VideoGenerator {
             }
         }
 
+        // 参考音频（方舟专用）：content[] 里追加 type=audio_url / role=reference_audio 的 item，
+        // audio_url.url 支持 asset:// 音频素材ID / 公网URL / Base64。用于锁定真人音色（口型+声音）。
+        if (referenceAudioUrls != null && !referenceAudioUrls.isEmpty()) {
+            for (String url : referenceAudioUrls) {
+                Map<String, Object> aud = new LinkedHashMap<>();
+                aud.put("type", "audio_url");
+                Map<String, Object> au = new LinkedHashMap<>();
+                au.put("url", url);
+                aud.put("audio_url", au);
+                aud.put("role", "reference_audio");
+                content.add(aud);
+            }
+        }
+
+        // 有参考音频时必须出声，否则静音片白传；无音频时沿用配置开关
+        boolean effectiveGenerateAudio = (!referenceAudioUrls.isEmpty()) || generateAudio;
+
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("model", modelId);
         body.put("content", content);
         body.put("duration", seconds);
         body.put("resolution", resolution);
         body.put("ratio", ratio);
-        body.put("generate_audio", generateAudio);
+        body.put("generate_audio", effectiveGenerateAudio);
 
         String jsonBody = mapper.writeValueAsString(body);
         String maskedKey = (apiKey == null || apiKey.isEmpty())
@@ -158,7 +183,8 @@ public class VolcengineVideoGenService implements VideoGenerator {
         System.out.println("[Volc DEBUG] POST " + taskEndpoint);
         System.out.println("[Volc DEBUG] Authorization: Bearer " + maskedKey);
         System.out.println("[Volc DEBUG] content 元素数=" + content.size());
-        System.out.println("[Volc DEBUG] generate_audio=" + generateAudio);
+        System.out.println("[Volc DEBUG] generate_audio(effective)=" + effectiveGenerateAudio
+                + " (config=" + generateAudio + ", refAudio=" + referenceAudioUrls.size() + ")");
         System.out.println("[Volc DEBUG] request body=\n" + jsonBody);
 
         HttpRequest req = HttpRequest.newBuilder()

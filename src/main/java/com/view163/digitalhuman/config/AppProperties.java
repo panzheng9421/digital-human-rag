@@ -34,6 +34,11 @@ public class AppProperties {
         private List<String> referenceImageUrls = new ArrayList<>();  // 默认多参考图（兜底/阿诺）
         private List<String> panReferenceImageUrls = new ArrayList<>();   // 老潘专属参考图（覆盖默认）
         private List<String> anuoReferenceImageUrls = new ArrayList<>();  // 阿诺专属参考图（覆盖默认）
+        // 参考音频（方舟专用）：asset://<音频素材ID>/公网URL/Base64，用于锁定真人音色（口型+声音）。
+        // 与参考图同理按 persona 区分；2.5 单段 [2,30]s、最多 10 段、总时长 ≤30s、wav/mp3、≤15MB。
+        private List<String> referenceAudioUrls = new ArrayList<>();       // 默认参考音频（兜底）
+        private List<String> panReferenceAudioUrls = new ArrayList<>();    // 老潘专属音色（覆盖默认）
+        private List<String> anuoReferenceAudioUrls = new ArrayList<>();   // 阿诺专属音色（覆盖默认）
 
         // ===== 引擎专属配置（按 provider 选一块）=====
         private Seedance seedance = new Seedance();
@@ -111,6 +116,23 @@ public class AppProperties {
 
         public List<String> getAnuoReferenceImageUrls() { return anuoReferenceImageUrls; }
         public void setAnuoReferenceImageUrls(List<String> anuoReferenceImageUrls) { this.anuoReferenceImageUrls = anuoReferenceImageUrls; }
+
+        public List<String> getReferenceAudioUrls() { return referenceAudioUrls; }
+        public void setReferenceAudioUrls(List<String> referenceAudioUrls) { this.referenceAudioUrls = referenceAudioUrls; }
+
+        public List<String> getPanReferenceAudioUrls() { return panReferenceAudioUrls; }
+        public void setPanReferenceAudioUrls(List<String> panReferenceAudioUrls) { this.panReferenceAudioUrls = panReferenceAudioUrls; }
+
+        public List<String> getAnuoReferenceAudioUrls() { return anuoReferenceAudioUrls; }
+        public void setAnuoReferenceAudioUrls(List<String> anuoReferenceAudioUrls) { this.anuoReferenceAudioUrls = anuoReferenceAudioUrls; }
+
+        /** 按 persona 选生效的参考音频：有专属配置用专属，否则回落默认。 */
+        public List<String> getReferenceAudioUrlsFor(String persona) {
+            List<String> specific = "pan".equalsIgnoreCase(persona) ? panReferenceAudioUrls
+                    : "anuo".equalsIgnoreCase(persona) ? anuoReferenceAudioUrls : referenceAudioUrls;
+            if (specific != null && !specific.isEmpty()) return specific;
+            return referenceAudioUrls == null ? List.of() : referenceAudioUrls;
+        }
 
         /** 按 persona 选生效的参考图：有专属配置用专属，否则回落默认。 */
         public List<String> getReferenceImageUrlsFor(String persona) {

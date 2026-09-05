@@ -35,6 +35,17 @@ app:
     #   - https://img.triview.cn/ai/5.png
     #   - https://img.triview.cn/ai/bedroom-night.jpg
 
+    # ---- 参考音频（方舟 Seedance 2.5 专用，锁定真人音色/口型）----
+    # 填入方舟「素材&虚拟人像库」拿到的 asset:// 音频素材ID（或公网URL/Base64），非空时自动追加
+    # content[].role=reference_audio，并强制 generate_audio=true（静音片传音频无效）。
+    # 2.5 约束：单段 [2,30]s、最多 10 段、总时长 ≤30s、wav/mp3、单文件 ≤15MB。
+    # reference-audio-urls:
+    #   - asset://asset-xxxxxxxx-audio
+    # pan-reference-audio-urls:    # 老潘专属音色（覆盖默认）
+    #   - asset://asset-老潘录音的音频素材id
+    # anuo-reference-audio-urls:   # 阿诺专属音色（覆盖默认）
+    #   - asset://asset-阿诺录音的音频素材id
+
     # ---- 引擎配置（按 provider 选一块生效）----
     seedance:
       base-url: https://new.xlcsh.top/v1/videos
