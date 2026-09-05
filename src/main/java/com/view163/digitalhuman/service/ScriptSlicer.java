@@ -29,24 +29,34 @@ public class ScriptSlicer {
     /** 次级标点：长句强制截断位置（优先级从高到低） */
     private static final String SECONDARY_DELIMS = "，、：——";
 
-    private final int maxChars;
-    private final int minChars;
+    private final int defaultSeconds;
 
     public ScriptSlicer(AppProperties props) {
         int seconds = props.getVideo().getSeconds();
         // seconds 异常（≤0）时兜底 120 字（≈30s），避免除零/负数导致整稿变一段
-        this.maxChars = seconds > 0 ? seconds * CHARS_PER_SECOND : 120;
-        this.minChars = (int) Math.max(15, Math.round(maxChars * MIN_FILL_RATIO));
+        this.defaultSeconds = seconds > 0 ? seconds : 24;
     }
 
+    /** 按配置的 app.video.seconds 切片（命令行管线用） */
     public List<String> slice(String script) {
+        return slice(script, defaultSeconds);
+    }
+
+    /**
+     * 按指定秒数切片（向导式出片用，前端 5-30s 动态选择）。
+     * 每段字数上限 = seconds × CHARS_PER_SECOND，粒度随秒数联动。
+     */
+    public List<String> slice(String script, int seconds) {
+        int maxChars = seconds > 0 ? seconds * CHARS_PER_SECOND : defaultSeconds * CHARS_PER_SECOND;
+        int minChars = (int) Math.max(15, Math.round(maxChars * MIN_FILL_RATIO));
+
         List<String> result = new ArrayList<>();
         if (script == null || script.isBlank()) {
             return result;
         }
 
         // Step 1: 按主标点切句 → 再对超长句按次级标点截断 → 得到原子片段列表
-        List<String> atoms = splitIntoAtoms(script);
+        List<String> atoms = splitIntoAtoms(script, maxChars);
 
         // Step 2: 贪心合并，每段 ≤ maxChars，合并后 ≥ minChars（末段除外）
         StringBuilder buf = new StringBuilder();
@@ -65,7 +75,7 @@ public class ScriptSlicer {
         }
 
         // Step 3: 后处理 —— 过短段（非末段）与下一段合并；末段过短则向上并入倒数第二段
-        return mergeShortSegments(result);
+        return mergeShortSegments(result, minChars);
     }
 
     // ── Step 1: 原子化分割 ──────────────────────────────────
@@ -75,7 +85,7 @@ public class ScriptSlicer {
      * 1) 先按主标点断句
      * 2) 对超过 maxChars 的单句，再按次级标点截成多段
      */
-    private List<String> splitIntoAtoms(String text) {
+    private List<String> splitIntoAtoms(String text, int maxChars) {
         List<String> sentences = splitByDelims(text, PRIMARY_DELIMS);
         List<String> atoms = new ArrayList<>();
         for (String s : sentences) {
@@ -83,7 +93,7 @@ public class ScriptSlicer {
                 atoms.add(s);
             } else {
                 // 超长句：按次级标点截断
-                atoms.addAll(splitLongSentence(s));
+                atoms.addAll(splitLongSentence(s, maxChars));
             }
         }
         return atoms;
@@ -113,7 +123,7 @@ public class ScriptSlicer {
      * - 累积超 maxChars 时封口
      * - 如果次级标点间仍有一段超 maxChars（无标点的长文字块），硬切 maxChars
      */
-    private List<String> splitLongSentence(String sentence) {
+    private List<String> splitLongSentence(String sentence, int maxChars) {
         List<String> parts = splitByDelims(sentence, SECONDARY_DELIMS);
         List<String> chunks = new ArrayList<>();
         StringBuilder buf = new StringBuilder();
@@ -167,7 +177,7 @@ public class ScriptSlicer {
      * 末段特殊处理：如果末段长度 < minChars 且总段数 > 1，
      * 则将末段向上合并到倒数第二段（避免"下期见。嘘。"这种 4 字尾巴单独成一段 30s 视频）。
      */
-    private List<String> mergeShortSegments(List<String> segments) {
+    private List<String> mergeShortSegments(List<String> segments, int minChars) {
         if (segments.size() <= 1) {
             return segments;
         }

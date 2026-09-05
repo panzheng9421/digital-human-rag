@@ -43,8 +43,9 @@ public class ScriptGenerator {
         this.topK = topK;
     }
 
-    /** 构建知识库：读文档 -> 切片 -> 向量化 -> 入库 */
+    /** 构建知识库：读文档 -> 切片 -> 向量化 -> 入库（先清空，避免与上次内容累积） */
     public void buildKnowledgeBase(String docsDir) throws Exception {
+        store.clear();
         List<String> docs = loader.loadAll(docsDir);
         List<String> chunks = splitter.splitAll(docs);
         System.out.println("[RAG] 载入文档 " + docs.size() + " 篇，切片 " + chunks.size() + " 段");

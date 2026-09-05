@@ -48,15 +48,21 @@ public class VideoGenService implements VideoGenerator {
     private final HttpClient http = createTrustAllHttpClient();
 
     public VideoGenService(AppProperties props, String persona) {
+        this(props, persona, 0, null);
+    }
+
+    /** 带覆盖构造器（向导式出片用）：secondsOverride>0 覆盖时长，outputDirOverride 非空覆盖输出目录 */
+    public VideoGenService(AppProperties props, String persona, int secondsOverride, String outputDirOverride) {
         AppProperties.Video v = props.getVideo();
         AppProperties.Video.Seedance s = v.getSeedance();
         this.baseUrl = s.getBaseUrl();
         this.apiKey = s.getApiKey();
         this.modelId = s.getModelId();
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
-        this.seconds = v.getSeconds();
+        this.seconds = secondsOverride > 0 ? secondsOverride : v.getSeconds();
         this.size = v.getSize();
-        this.outputDir = v.getOutputDir();
+        this.outputDir = (outputDirOverride != null && !outputDirOverride.isEmpty())
+                ? outputDirOverride : v.getOutputDir();
         this.retryAttempts = Math.max(0, v.getRetryAttempts());
     }
 

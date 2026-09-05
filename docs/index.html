@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="FjimMiLAswgnHgcPozoPpZ">
+<head data-page-node-id="ZHM4s8ToZpQXLDRA1ydz8B">
+<meta charset="UTF-8" data-page-node-id="2kO67kQ1AggrIsdKwZ8brX">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="uRmSSGsUwa8i3emNFTweEE">
+<title>数字分身工作台 · digital-human-rag</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --panel: #ffffff;
+    --line: #e8e5e0;
+    --line-strong: #d9d5cf;
+    --text: #1d1a17;
+    --muted: #8a837b;
+    --accent: #ff4d0f;
+    --accent-deep: #e84000;
+    --accent-tint: #fff1ea;
+    --ok: #1a9e5c;
+    --ok-tint: #e9f7f0;
+    --err: #d93025;
+    --err-tint: #fdeceb;
+    --radius-card: 14px;
+    --radius-ctl: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* ───── 顶栏 ───── */
+  .topbar {
+    height: 60px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px;
+    position: sticky; top: 0; z-index: 50;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .brand-mark {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 14px; font-weight: 800;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
+  .topbar-right a { color: var(--muted); text-decoration: none; font-size: 13.5px; }
+  .topbar-right a:hover { color: var(--text); }
+  .topbar-right a.gh { display: flex; align-items: center; gap: 6px; font-weight: 600; }
+
+  /* ───── 布局 ───── */
+  .shell { display: flex; min-height: calc(100vh - 60px); }
+  .sidebar {
+    width: 232px; flex-shrink: 0;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    padding: 20px 14px;
+    position: sticky; top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+  }
+  .side-label { font-size: 12px; color: var(--muted); padding: 0 10px; margin-bottom: 10px; }
+  .side-label b { color: var(--accent); font-weight: 700; }
+  .side-item {
+    display: flex; align-items: center; gap: 11px;
+    padding: 10px 12px; border-radius: var(--radius-ctl);
+    cursor: pointer; color: var(--text); font-size: 14px;
+    margin-bottom: 2px; border: none; background: none; width: 100%;
+    text-align: left; font-family: inherit;
+    transition: background .15s ease;
+  }
+  .side-item:hover { background: #f4f2ee; }
+  .side-item.active { background: var(--accent-tint); color: var(--accent-deep); font-weight: 600; }
+  .side-item.locked { color: #bcb5ac; cursor: not-allowed; }
+  .side-item.locked:hover { background: none; }
+  .side-num {
+    width: 24px; height: 24px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center;
+    font-size: 12.5px; font-weight: 600;
+    background: #f0ede8; color: var(--muted);
+  }
+  .side-item.active .side-num { background: var(--accent); color: #fff; }
+  .side-item.done .side-num { background: var(--ok); color: #fff; }
+  .side-icon { width: 17px; height: 17px; flex-shrink: 0; }
+
+  .main { flex: 1; padding: 30px 36px 60px; min-width: 0; }
+  .page { display: none; max-width: 920px; }
+  .page.active { display: block; }
+  .page h1 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .page .sub { color: var(--muted); font-size: 13.5px; margin-bottom: 24px; }
+
+  /* ───── 卡片 ───── */
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    padding: 22px;
+    margin-bottom: 16px;
+  }
+  .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .home-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius-card); padding: 24px;
+    cursor: pointer; transition: border-color .15s ease, transform .15s ease;
+    text-align: left; font-family: inherit; width: 100%;
+  }
+  .home-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .home-card:active { transform: translateY(0); }
+  .home-card.wide { grid-column: 1 / -1; }
+  .home-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-tint); color: var(--accent-deep); display: grid; place-items: center; margin-bottom: 14px; }
+  .home-ico svg { width: 18px; height: 18px; }
+  .home-card h3 { font-size: 15.5px; margin-bottom: 5px; }
+  .home-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+
+  /* ───── 表单控件 ───── */
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 7px; }
+  .field .hint { font-weight: 400; color: var(--muted); margin-left: 6px; }
+  textarea, input[type="text"], select {
+    width: 100%; font-family: inherit; font-size: 14px; color: var(--text);
+    background: #fcfbf9; border: 1px solid var(--line-strong);
+    border-radius: var(--radius-ctl); padding: 10px 13px;
+    transition: border-color .15s ease;
+  }
+  textarea:focus, input[type="text"]:focus, select:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 90px; line-height: 1.7; }
+  textarea.script-box { min-height: 220px; font-size: 14.5px; background: #fff; }
+  select { width: auto; min-width: 130px; cursor: pointer; }
+  .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  [hidden] { display: none !important; }
+  .row select { width: auto; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    border-radius: var(--radius-ctl); padding: 10px 20px;
+    cursor: pointer; border: 1px solid transparent;
+    transition: background .15s ease, border-color .15s ease;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-deep); }
+  .btn-primary:disabled { background: #f0bdb0; cursor: not-allowed; }
+  .btn-ghost { background: #fff; color: var(--text); border-color: var(--line-strong); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent-deep); }
+  .btn-sm { padding: 6px 14px; font-size: 13px; }
+
+  /* ───── 状态 ───── */
+  .badge {
+    display: inline-block; font-size: 12px; font-weight: 600;
+    border-radius: 999px; padding: 2px 10px;
+  }
+  .badge-wait { background: #f0ede8; color: var(--muted); }
+  .badge-run  { background: var(--accent-tint); color: var(--accent-deep); }
+  .badge-done { background: var(--ok-tint); color: var(--ok); }
+  .badge-fail { background: var(--err-tint); color: var(--err); }
+
+  .skel {
+    background: linear-gradient(100deg, #f1efeb 40%, #f9f8f5 50%, #f1efeb 60%);
+    background-size: 200% 100%;
+    border-radius: var(--radius-ctl);
+    min-height: 18px; margin-bottom: 10px;
+    animation: shimmer 1.4s ease infinite;
+  }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel { animation: none; } }
+
+  .error-box {
+    background: var(--err-tint); color: var(--err);
+    border-radius: var(--radius-ctl); padding: 10px 14px;
+    font-size: 13.5px; margin-top: 12px; word-break: break-all;
+  }
+
+  /* ───── 分段卡 ───── */
+  .seg-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 12px;
+  }
+  .seg-head { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; }
+  .seg-no { font-weight: 700; font-size: 13.5px; color: var(--accent-deep); }
+  .seg-meta { font-size: 12px; color: var(--muted); }
+  .seg-head .spacer { flex: 1; }
+  .seg-text {
+    width: 100%; font-size: 13.5px; line-height: 1.75; background: #fcfbf9;
+  }
+  .seg-prompt {
+    margin-top: 10px; font-size: 12.5px; color: var(--muted);
+    white-space: pre-wrap; word-break: break-all;
+    background: #faf9f6; border: 1px dashed var(--line-strong);
+    border-radius: 8px; padding: 10px 12px; max-height: 180px; overflow-y: auto;
+    line-height: 1.6;
+  }
+  video.result { width: 100%; max-width: 560px; border-radius: var(--radius-ctl); border: 1px solid var(--line); background: #000; margin-top: 12px; display: block; }
+  img.gen { max-width: 100%; border-radius: var(--radius-ctl); border: 1px solid var(--line); margin-top: 16px; display: block; }
+
+  /* ───── toast ───── */
+  #toast {
+    position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: #26221e; color: #fff; font-size: 13.5px;
+    padding: 10px 18px; border-radius: 10px;
+    opacity: 0; pointer-events: none; transition: all .25s ease;
+    z-index: 100; max-width: 80vw;
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 800px) {
+    .shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: static; display: flex; overflow-x: auto; padding: 10px; gap: 4px; border-right: none; border-bottom: 1px solid var(--line); }
+    .side-label { display: none; }
+    .side-item { width: auto; white-space: nowrap; margin-bottom: 0; }
+    .main { padding: 20px 16px 50px; }
+    .home-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-page-node-id="2hTsXb0cE3ygALCeLnKqOf">
+
+<header class="topbar" data-page-node-id="Bwdr5hfwHANCpAWc4EbzDW">
+  <div class="brand" data-page-node-id="42m4gUtbiEljWWQkQUoUuJ"><span class="brand-mark" data-page-node-id="7PFsjUcF4mqcMMGA59AI9k">分</span>数字分身工作台</div>
+  <div class="topbar-right" data-page-node-id="w7Gg50B49sWUZCdhzLjN1N">
+    <a class="gh" href="https://github.com/panzheng9421/digital-human-rag" target="_blank" rel="noopener" data-page-node-id="ISDXOIckcjRUJCvyGZCkKb">
+      <svg viewBox="0 0 16 16" width="15" height="15" fill="currentColor" aria-hidden="true" data-page-node-id="50rrwDOAF4H4WYv41BjyeJ"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z" data-page-node-id="47Cw6MrrSj9qJea5OSU8k4"/></svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<div class="shell" data-page-node-id="Aji1gYBh6WjtMonmb913Es">
+  <nav class="sidebar" data-page-node-id="N1oP8dpyl9WF0sGFUTvZcR">
+    <div class="side-label" data-page-node-id="Ofnq0YJYUKCFqSfQdlCFjN">创作流程 <b id="flow-progress" data-page-node-id="HzgEGSZeovDcQH1vQSqKoE"></b></div>
+    <button class="side-item active" data-page="home" onclick="go('home')" data-page-node-id="cSHsGjO8m2SHxSBYBE5gcD">
+      <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="ejYvCp52Rmw8uZmqzzrpCp"><path d="M3 10.5 12 3l9 7.5" data-page-node-id="Zu4Z3zOnCZdQ1NwmsE4sET"/><path d="M5 9.5V21h14V9.5" data-page-node-id="rKosbEbCkJAD85RAc8B4n8"/></svg>
+      工作台
+    </button>
+    <button class="side-item" data-page="img" onclick="go('img')" data-page-node-id="gPlST7vyL4Cb48s8N8vB4t">
+      <span class="side-num" data-page-node-id="rcJFaloKQP3VR8UQDMZpAj">1</span> 文生图
+    </button>
+    <button class="side-item" data-page="script" onclick="go('script')" data-page-node-id="v1S83ENcAZYJN7zfzyG7iQ">
+      <span class="side-num" data-page-node-id="al32yNy5Z0xfBqyagh0Od1">2</span> 文案
+    </button>
+    <button class="side-item" data-page="slice" id="nav-slice" onclick="go('slice')" data-page-node-id="JWZKHtTVmUwXAsdBGiQgjR">
+      <span class="side-num" data-page-node-id="sCGTZwyyBYGdPEkdS0scg1">3</span> 切片
+    </button>
+    <button class="side-item" data-page="enrich" id="nav-enrich" onclick="go('enrich')" data-page-node-id="HiUfEABWZYMbrUS6ChFKg6">
+      <span class="side-num" data-page-node-id="A4Q1Bd5ufFRBZg5wdeVYbv">4</span> 导演富化
+    </button>
+    <button class="side-item" data-page="video" id="nav-video" onclick="go('video')" data-page-node-id="HEqH6h2UvjqMEOHHbeaJAr">
+      <span class="side-num" data-page-node-id="Mlz39lwCwRGpXX8CUAXE19">5</span> 生成视频
+    </button>
+  </nav>
+
+  <main class="main" data-page-node-id="JLvgpsfPAV9getk4ReQFF3">
+
+    <!-- ═══════ 工作台首页 ═══════ -->
+    <section class="page active" id="page-home" data-page-node-id="Q6VBGWl7Bqqgha9pKI7BAi">
+      <h1 data-page-node-id="HjftDsBzyZyMiahA8n7xPT">工作台</h1>
+      <p class="sub" data-page-node-id="f9SZeRXwSCgBDCKTEvUlwf">选择一种方式开始制作你的数字人口播视频。</p>
+      <div class="home-grid" data-page-node-id="WlYpArrV8f7xIVmd3wIZg4">
+        <button class="home-card" onclick="go('img')" data-page-node-id="mlDEE8qL6llBCBsDRpSOo5">
+          <div class="home-ico" data-page-node-id="V4asnFBO4RaSPoSgABpP0f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="L6AWe605TlzHTDJqa03HnW"><rect x="3" y="4" width="18" height="16" rx="2" data-page-node-id="TkjefBqdqRgL6PLb8lqWRg"/><circle cx="9" cy="10" r="1.6" data-page-node-id="zGEORQVcvCdC4zG3J2QNlc"/><path d="m21 15-4.5-4.5L8 19" data-page-node-id="sTRYD7BSbi7lU4NE96Yi2k"/></svg></div>
+          <h3 data-page-node-id="obHCxq74FyPZ0yEKE6DLhN">文生图</h3>
+          <p data-page-node-id="qmWH7jtcSvJ921fS4J7kYs">输入一段提示词，调用方舟 Seedream 生成参考图或场景图，可直接下载用作视频参考素材。</p>
+        </button>
+        <button class="home-card" onclick="go('script')" data-page-node-id="hpIUCPiB2f8ATSrWDHyoQe">
+          <div class="home-ico" data-page-node-id="p9zQ7bRlGxz6iVwRsH95Q8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="GdBg5BTYzsfMqfvn4m9xJe"><path d="M12 20h9" data-page-node-id="ZT9jkWNirR5QpkGLPnos0H"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" data-page-node-id="iTE4e66pkDebnRK9GHve5I"/></svg></div>
+          <h3 data-page-node-id="LQfFKZLRFLjFlij66Wt24i">文案</h3>
+          <p data-page-node-id="x4NDqc68YDWkSD8E42SGzl">输入一句话主题，RAG 知识库 + 人设 Prompt 自动写出裸口播稿，生成后可自由编辑。</p>
+        </button>
+        <button class="home-card" onclick="go('slice')" data-page-node-id="JQjDNyBHfjWLQOamKWo7ZC">
+          <div class="home-ico" data-page-node-id="MeiLtrFacNSL9wQSEnQGn7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="tCdXWCi2YaZqErPBFfkWb2"><circle cx="6" cy="6" r="2.6" data-page-node-id="7vinmONxOpZM6CoPDJJNKG"/><circle cx="6" cy="18" r="2.6" data-page-node-id="3Ft72eelycxKGJnmz0ddv8"/><path d="M20 4 8.6 15.4M14.5 9.5 20 20M8.6 8.6 12 12" data-page-node-id="RgzXeI5gqVhHXoovpR8zEA"/></svg></div>
+          <h3 data-page-node-id="BJq0xLhoejr7vNVBLN2fqb">切片</h3>
+          <p data-page-node-id="CeEC9Ye8Oul2gaQ7CiqWfI">选择每段时长（5-30 秒），按语速自动把口播稿切成多段分镜，每段可单独修改。</p>
+        </button>
+        <button class="home-card" onclick="go('enrich')" data-page-node-id="0eP0I8X1PwHe1o4e5MS2nx">
+          <div class="home-ico" data-page-node-id="ldieREtSeC9n0HRrC0BiTp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="qxn4nRlgtyJEd347mOqK0N"><path d="M15 4V2m0 20v-2M9.5 9.5 3 21l12-6.5M15 15l6-12-12 6.5" data-page-node-id="Ts56McsEuFfIw48WBpLNmN"/><path d="M18 4v4M16 6h4" data-page-node-id="KtOcbi4xvjuxTiayHGzv7L"/></svg></div>
+          <h3 data-page-node-id="0716fD4Y6YqHwy5KQN6fAg">导演富化</h3>
+          <p data-page-node-id="ySobDXA8hT84pqHzghMFKA">一键把所有切片扩写成八段结构的表演提示词（画面、动作、台词节奏、音色），逐段可重做。</p>
+        </button>
+        <button class="home-card wide" onclick="go('video')" data-page-node-id="BGE9SApGfnu6dIeE2Cijhg">
+          <div class="home-ico" data-page-node-id="jJlaTGED2Ar8hpAwexkDBd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="YSIch2dYTEtQ4rTeOmzSbL"><rect x="2" y="5" width="14" height="14" rx="2.5" data-page-node-id="a0LtuT5XT73pv7zktCgINC"/><path d="m16 10 6-3.5v11L16 14" data-page-node-id="8bJqiAHwOIanRbCDmy8ACu"/></svg></div>
+          <h3 data-page-node-id="8OnTNdEtbi1bFVwJVrBIWw">生成视频</h3>
+          <p data-page-node-id="Qx8cvsiDF9I52aRtqN16bD">主动权在你手里：点哪段生成哪段，每段独立出片、页面内直接播放和下载，不满意单独重做。</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══════ 1 文生图 ═══════ -->
+    <section class="page" id="page-img" data-page-node-id="Jl9h5OWWeTa1wVix4KvP9c">
+      <h1 data-page-node-id="QpqTx5iC2ZNkNiTdVH4DRC">文生图</h1>
+      <p class="sub" data-page-node-id="2MwwFyP90XlPogEXtc63R1">输入提示词生成图片。方舟 Seedream 模型，同步返回，url 24 小时有效请及时保存。</p>
+      <div class="card" data-page-node-id="1taxuyxKzQWNBMuvWfw9Wf">
+        <div class="field" data-page-node-id="pTDM6ZHsbZdirAQplhBZuD">
+          <label data-page-node-id="XyRzJYwCNO8OhIMxpBu8ro">提示词 <span class="hint" data-page-node-id="E9pCBowDrNmVsEno2FWlWv">支持中英文，建议不超过 300 字</span></label>
+          <textarea id="img-prompt" rows="4" placeholder="例如：温馨儿童房，蓝色云朵床单的大床居中，书桌台灯、书架、世界地图，白墙自行车涂鸦，自然光，写实摄影质感，16:9"></textarea>
+        </div>
+        <div class="row" data-page-node-id="nrBhmX7apDEzviACFzhp4e">
+          <div class="field" style="margin-bottom:0" data-page-node-id="NH6xo3HqikY42VfFXBwwxJ">
+            <label style="margin-bottom:0" data-page-node-id="Anq0oO6KhFmwJE6eGev6JZ">尺寸</label>
+          </div>
+          <select id="img-size" data-page-node-id="MzeDXdxVdqCpWICtQYyxd5">
+            <option value="2K" data-page-node-id="34h7wLLK2WrOuURQvoS4KK">2K（默认）</option>
+            <option value="4K" data-page-node-id="EctDDAa9lzbMNOWvcGfci4">4K</option>
+          </select>
+          <button class="btn btn-primary" id="img-btn" onclick="genImage()" data-page-node-id="t9TWCVlNgoKLeEQNHP3LpH">生成图片</button>
+        </div>
+        <div id="img-status" data-page-node-id="vIfHz5BcjoxaJO9QoO8c9P"></div>
+        <div id="img-result" data-page-node-id="BHQPL0GS7SeBlp3JUjYmhr"></div>
+      </div>
+    </section>
+
+    <!-- ═══════ 2 文案 ═══════ -->
+    <section class="page" id="page-script" data-page-node-id="bGCKQpD3Bz6iJnIDFjAAuK">
+      <h1 data-page-node-id="8ES13m5XlIFpjC5WSPoKvb">文案</h1>
+      <p class="sub" data-page-node-id="TeFePvcCRUs6qWyldy6T45">AI 生成或直接在下方粘贴已有文案，确认后进入切片。</p>
+      <div class="card" data-page-node-id="QbK4Xfly5a1BRTUsvkl4An">
+        <div class="field" data-page-node-id="lwmP6W4Qkxm4j84gmDyZp2">
+          <label data-page-node-id="g2PBZnzU5SqEu8Oexd4WT9">主题 <span class="hint" data-page-node-id="HMIUhexGYf1zK2Y5DpVaw0">一句话即可，例如：剪映到底难不难用</span></label>
+          <input type="text" id="script-topic" maxlength="120" placeholder="输入口播主题" data-page-node-id="EBouL4hasj5ULPvG9G4O4Z">
+        </div>
+        <div class="row" data-page-node-id="X3kl6zb0gBFMFOv4NKFzWd">
+          <div class="field" style="margin-bottom:0" data-page-node-id="iniEQw4EeAJsCyME6Sh7Cn">
+            <label style="margin-bottom:0" data-page-node-id="k3wSAQAhP9e5HHtt9ISeNL">数字人</label>
+          </div>
+          <select id="script-persona" data-page-node-id="F0pOBpD5fFv5WkGG3UGLlR">
+            <option value="anuo" data-page-node-id="S1K91HB56slzmiK1lSkmpU">阿诺</option>
+            <option value="pan" data-page-node-id="Xhy3HOLss1cC4JEYqJUc9v">老潘</option>
+          </select>
+          <button class="btn btn-primary" id="script-btn" onclick="genScript()" data-page-node-id="sbztYqNnpPi7wt8rGlNUB4">生成裸口播稿</button>
+        </div>
+        <div id="script-status" data-page-node-id="cIppab7m7fA821pqP64yYj"></div>
+      </div>
+      <div class="card" id="script-result" data-page-node-id="n8VDUteTXcNisyHhNzfRUG">
+        <div class="field" data-page-node-id="DArMiZfQjyNH3t3ES8HDyw">
+          <label data-page-node-id="EbJjvytONCimGM3BTHgDMm">裸口播稿 <span class="hint" data-page-node-id="3mCyIvux3YV0LGD4dGsdlT">可直接编辑，确认无误后进入切片</span></label>
+          <textarea class="script-box" id="script-box" rows="10"></textarea>
+          <div style="font-size:12px;color:var(--muted);margin-top:5px" data-page-node-id="0zBP5KIKOyPKJHiCEJgMhO">字数：<span id="script-chars" data-page-node-id="7CVMR8epH4hhuDXJApNc58">0</span>（按 5 字/秒估算口播时长）</div>
+        </div>
+        <div class="row" data-page-node-id="1NKI2LtPngkV3hPGCfxGr9">
+          <button class="btn btn-primary" onclick="go('slice')" data-page-node-id="Q1YJpxSq4TOFwuW2kAdEWr">下一步：切片</button>
+          <button class="btn btn-ghost btn-sm" id="script-redo" onclick="genScript()" data-page-node-id="ZY6bZEiuid2Ae6s3hcmKmi">重新生成</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════ 3 切片 ═══════ -->
+    <section class="page" id="page-slice" data-page-node-id="yHMz6kJMy82VhWiQ7hJSV5">
+      <h1 data-page-node-id="n6pvJBvQM9y7gM9e0uuu9H">切片</h1>
+      <p class="sub" data-page-node-id="ilPImQoo1N1XnL4wkwtfRm">选择每段时长，按口播语速（约 5 字/秒）自动切分，每段可单独编辑。</p>
+      <div class="card" data-page-node-id="E1R2t0B2OOAvwWKW04l1Y8">
+        <div class="row" data-page-node-id="U1yx7PmhAwjuMoXqd8WpPk">
+          <div data-page-node-id="CoKnC7bKV0d2wzBvrTAtCU">
+            <label style="display:block;font-size:13px;font-weight:600;margin-bottom:7px" data-page-node-id="3prAxNnhgMIqAAQojIeBl4">每段时长</label>
+            <select id="slice-seconds" data-page-node-id="F0fQOPIuuCOADsgOXzJnqp">
+              <option value="5" data-page-node-id="iemHoVV9Gc7ORJSSEsUAMm">5 秒</option>
+              <option value="10" data-page-node-id="ZoCwoFF6AOeaydtVIlCP3o">10 秒</option>
+              <option value="15" selected data-page-node-id="9P61FzVFQU0GskeGtYIcci">15 秒</option>
+              <option value="20" data-page-node-id="ZXDeFuLxqEboHDt804IRx9">20 秒</option>
+              <option value="25" data-page-node-id="aCuQ9nasoMAWjAj8LQdaWB">25 秒</option>
+              <option value="30" data-page-node-id="2mG6FQuA7nHTQA7qaTuLzi">30 秒</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" id="slice-btn" style="margin-top:22px" onclick="doSlice()" data-page-node-id="A6fVK9PjtwyF5QpDmAQ1wr">开始切片</button>
+        </div>
+        <div id="slice-status" data-page-node-id="1NFxxBkq5ZjYrbEPhECvO9"></div>
+      </div>
+      <div id="slice-list" data-page-node-id="GTuZWwAFv977CehnBQ9bfN"></div>
+      <div class="row" id="slice-actions" hidden style="margin-top:6px" data-page-node-id="cOEbNmGifrF6UfzVQ3nHMv">
+        <button class="btn btn-primary" onclick="go('enrich')" data-page-node-id="BojrR1GAMcnHlgJpG26zL3">下一步：导演富化</button>
+        <button class="btn btn-ghost btn-sm" onclick="doSlice()" data-page-node-id="tEmPPIAQYemG3YKeDLzGca">重新切片</button>
+      </div>
+    </section>
+
+    <!-- ═══════ 4 导演富化 ═══════ -->
+    <section class="page" id="page-enrich" data-page-node-id="WFWptG0o5mRGRnaF6z1kAZ">
+      <h1 data-page-node-id="NBtjLRHoGGYjAzItodJ6dK">导演富化</h1>
+      <p class="sub" data-page-node-id="0iVJHrNjiC8Nvk1EG36nQY">把每段切片扩写成八段结构表演提示词（生成目标 / 参考素材职责 / 事件脚本 / 音色锚定 / 台词等）。逐段确认，不满意的单独重做。</p>
+      <div class="card" data-page-node-id="E5bKQVSHgdD52GvWb4a17L">
+        <div class="row" data-page-node-id="rItVQnCP3L9jiwvcV4Ci64">
+          <button class="btn btn-primary" id="enrich-all-btn" onclick="enrichAll()" data-page-node-id="yqjZdO9HEJBUliidnazPU7">一键富化全部切片</button>
+          <span style="font-size:13px;color:var(--muted)" id="enrich-progress" data-page-node-id="QTPpJcYr8LBK9y8WT72maA"></span>
+        </div>
+        <div id="enrich-status" data-page-node-id="KdGXVAPxMKn9nmE5veRaEJ"></div>
+      </div>
+      <div id="enrich-list" data-page-node-id="fns58sYlBPolmSUEJCQMJf"></div>
+      <div class="row" id="enrich-actions" hidden style="margin-top:6px" data-page-node-id="Yok41YStUx47YnxWdsW0Dd">
+        <button class="btn btn-primary" onclick="go('video')" data-page-node-id="7czj8nFI8z4neIr2qAyeKz">下一步：生成视频</button>
+      </div>
+    </section>
+
+    <!-- ═══════ 5 生成视频 ═══════ -->
+    <section class="page" id="page-video" data-page-node-id="O54qMAw1zJ89dycAO5N7wa">
+      <h1 data-page-node-id="DcaPe40CpNflebCtubL3pT">生成视频</h1>
+      <p class="sub" data-page-node-id="Zujm0pdF1jVVlK83QzjVOT">点哪段生成哪段，每段独立出片（方舟 Seedance），完成后页面内直接播放。生成中可切走，回来还在跑。</p>
+      <div id="video-list" data-page-node-id="ONNnezKmWTJTAujabAh2AY"></div>
+    </section>
+
+  </main>
+</div>
+
+<div id="toast" data-page-node-id="6TarEqW9sHT9xPTRTkcjbV"></div>
+
+<script>
+/* ═══════════ 配置 ═══════════ */
+const API_BASE = "http://localhost:8080";   // 部署到 ECS 后改成你的域名
+
+/* ═══════════ 全局状态 ═══════════ */
+const state = {
+  taskId: null,
+  script: "",
+  seconds: 15,
+  segments: [],        // [{index, text, chars}]
+  enriched: {},        // index -> visualPrompt
+  enrichRunning: {},   // index -> true（富化进行中）
+  enrichErrors: {},    // index -> 错误信息
+  videoJobs: {},       // index -> {timer}
+};
+
+/* ═══════════ 导航 ═══════════ */
+const PAGES = ["home", "img", "script", "slice", "enrich", "video"];
+
+function unlocked(page) {
+  if (page === "slice")  return !!state.taskId || $("script-box").value.trim().length > 0;
+  if (page === "enrich") return state.segments.length > 0;
+  if (page === "video")  return Object.keys(state.enriched).length > 0;
+  return true;
+}
+
+function go(page) {
+  if (!unlocked(page)) {
+    const need = { slice: "请先输入或生成文案", enrich: "请先在第 3 步完成切片", video: "请先在第 4 步富化至少一段" };
+    toast(need[page] || "该步骤未解锁");
+    return;
+  }
+  PAGES.forEach(p => {
+    document.getElementById("page-" + p).classList.toggle("active", p === page);
+    const nav = document.querySelector('.side-item[data-page="' + p + '"]');
+    if (nav) nav.classList.toggle("active", p === page);
+  });
+  if (page === "enrich") renderEnrich();
+  if (page === "video") renderVideo();
+  // 切片页：按实际状态同步按钮显隐（防止历史残留）
+  if (page === "slice") $("slice-actions").hidden = state.segments.length === 0;
+}
+
+function refreshNav() {
+  const doneSet = {
+    script: !!state.taskId || $("script-box").value.trim().length > 0,
+    slice: state.segments.length > 0,
+    enrich: Object.keys(state.enriched).length > 0,
+  };
+  ["slice", "enrich", "video"].forEach(p => {
+    const nav = document.querySelector('.side-item[data-page="' + p + '"]');
+    nav.classList.toggle("locked", !unlocked(p));
+  });
+  ["script", "slice", "enrich"].forEach(p => {
+    const nav = document.querySelector('.side-item[data-page="' + p + '"]');
+    nav.classList.toggle("done", !!doneSet[p]);
+  });
+  const n = Object.values(doneSet).filter(Boolean).length;
+  document.getElementById("flow-progress").textContent = "已完成 " + n + " / 3";
+}
+
+/* ═══════════ 工具 ═══════════ */
+const $ = id => document.getElementById(id);
+
+function toast(msg) {
+  const t = $("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove("show"), 2800);
+}
+
+async function api(path, body) {
+  const resp = await fetch(API_BASE + path, {
+    method: body ? "POST" : "GET",
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if (!resp.ok) throw new Error("HTTP " + resp.status);
+  return resp.json();
+}
+
+function skeleton(el, lines) {
+  el.hidden = false;
+  el.innerHTML = Array.from({ length: lines }, () => '<div class="skel" style="width:' + (60 + Math.random() * 35) + '%"></div>').join("");
+}
+
+/* ═══════════ 1 文生图 ═══════════ */
+async function genImage() {
+  const prompt = $("img-prompt").value.trim();
+  if (!prompt) { toast("请输入提示词"); return; }
+  const btn = $("img-btn"), status = $("img-status"), result = $("img-result");
+  btn.disabled = true;
+  result.innerHTML = "";
+  skeleton(status, 3);
+  status.insertAdjacentHTML("afterbegin", '<div style="font-size:13px;color:var(--muted);margin-bottom:10px">生成中，一般 5-30 秒…</div>');
+  try {
+    const d = await api("/api/image/generate", { prompt, size: $("img-size").value, ratio: $("img-ratio").value });
+    if (d.error) throw new Error(d.error);
+    status.innerHTML = "";
+    result.innerHTML =
+      '<img class="gen" src="' + d.url + '" alt="生成图片">' +
+      '<div class="row" style="margin-top:12px">' +
+      '<a class="btn btn-ghost btn-sm" href="' + d.url + '" download target="_blank" rel="noopener">下载原图</a>' +
+      '<span style="font-size:12px;color:var(--muted)">尺寸 ' + (d.size || "-") + ' · 链接 24 小时有效</span></div>';
+  } catch (e) {
+    status.innerHTML = '<div class="error-box">' + e.message + '</div>';
+  }
+  btn.disabled = false;
+}
+
+/* ═══════════ 2 文案 ═══════════ */
+async function genScript() {
+  const topic = $("script-topic").value.trim();
+  if (!topic) { toast("请输入主题"); return; }
+  const btn = $("script-btn"), status = $("script-status");
+  const persona = $("script-persona").value;
+  btn.disabled = true; $("script-redo").disabled = true;
+  skeleton(status, 5);
+  status.insertAdjacentHTML("afterbegin", '<div style="font-size:13px;color:var(--muted);margin-bottom:10px">RAG 建库 + 人设写稿中，约 1-2 分钟，别关页面…</div>');
+  try {
+    const d = await api("/api/wizard/draft", { topic, persona });
+    if (d.error) throw new Error(d.error);
+    // 新稿 → 重置后续所有流程状态
+    state.taskId = d.taskId;
+    state.script = d.script;
+    state.segments = [];
+    state.enriched = {};
+    state.enrichErrors = {};
+    Object.values(state.videoJobs).forEach(j => clearInterval(j.timer));
+    state.videoJobs = {};
+    $("slice-actions").hidden = true;
+    $("slice-list").innerHTML = "";
+    $("slice-status").innerHTML = "";
+    $("script-box").value = d.script;
+    updateScriptChars();
+    status.innerHTML = "";
+    toast("裸稿生成完成，确认后进入切片");
+    refreshNav();
+  } catch (e) {
+    status.innerHTML = '<div class="error-box">' + e.message + '</div>';
+  }
+  btn.disabled = false; $("script-redo").disabled = false;
+}
+
+function updateScriptChars() {
+  $("script-chars").textContent = $("script-box").value.length;
+  refreshNav();
+}
+
+/* ═══════════ 3 切片 ═══════════ */
+async function doSlice() {
+  if (!state.taskId && !$("script-box").value.trim()) { toast("请先输入或生成文案"); return; }
+  const seconds = parseInt($("slice-seconds").value, 10);
+  const script = $("script-box").value.trim();
+  if (!script) { toast("口播稿为空"); return; }
+  const btn = $("slice-btn"), status = $("slice-status");
+  btn.disabled = true;
+  skeleton(status, 3);
+  try {
+    const d = await api("/api/wizard/slice", { taskId: state.taskId, script, seconds });
+    if (d.error) throw new Error(d.error);
+    // 后端可能新建了会话（手动输入文案时），更新 taskId
+    if (d.taskId) state.taskId = d.taskId;
+    // 重新切片 → 清空富化与视频状态
+    state.segments = d.segments;
+    state.seconds = d.seconds;
+    state.enriched = {};
+    state.enrichErrors = {};
+    Object.values(state.videoJobs).forEach(j => clearInterval(j.timer));
+    state.videoJobs = {};
+    status.innerHTML = '<div style="font-size:13px;color:var(--ok)">切成 ' + d.segments.length + ' 段 · 每段目标 ' + d.seconds + ' 秒</div>';
+    renderSliceList();
+    $("slice-actions").hidden = false;
+    refreshNav();
+  } catch (e) {
+    status.innerHTML = '<div class="error-box">' + e.message + '</div>';
+  }
+  btn.disabled = false;
+}
+
+function renderSliceList() {
+  $("slice-list").innerHTML = state.segments.map(s =>
+    '<div class="seg-card">' +
+    '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' +
+    '<span class="seg-meta">' + s.chars + ' 字 · 约 ' + Math.round(s.chars / 5) + ' 秒</span></div>' +
+    '<textarea class="seg-text" rows="3" data-idx="' + s.index + '" oninput="editSegment(' + s.index + ', this.value)">' + esc(s.text.replace(/\n/g, '')) + '</textarea>' +
+    '</div>'
+  ).join("");
+}
+
+function editSegment(index, text) {
+  const seg = state.segments.find(s => s.index === index);
+  if (seg) { seg.text = text; seg.chars = text.length; }
+}
+
+/* ═══════════ 4 导演富化 ═══════════ */
+async function enrichOne(index) {
+  const seg = state.segments.find(s => s.index === index);
+  if (!seg) throw new Error("片段不存在");
+  const d = await api("/api/wizard/enrich", { taskId: state.taskId, index, segmentText: seg.text });
+  if (d.error) throw new Error(d.error);
+  state.enriched[index] = d.visualPrompt;
+  return d;
+}
+
+async function enrichAll() {
+  const btn = $("enrich-all-btn"), status = $("enrich-status"), progress = $("enrich-progress");
+  btn.disabled = true;
+  renderEnrich();
+  for (const seg of state.segments) {
+    progress.textContent = "富化中 " + seg.index + " / " + state.segments.length + " …";
+    state.enrichRunning[seg.index] = true;
+    renderEnrich();
+    try {
+      await enrichOne(seg.index);
+    } catch (e) {
+      state.enrichErrors[seg.index] = e.message;
+    }
+    delete state.enrichRunning[seg.index];
+    renderEnrich();
+  }
+  progress.textContent = "";
+  const ok = state.segments.filter(s => state.enriched[s.index]).length;
+  status.innerHTML = '<div style="font-size:13px;color:' + (ok === state.segments.length ? 'var(--ok)' : 'var(--err)') + '">完成 ' + ok + ' / ' + state.segments.length + ' 段' + (ok < state.segments.length ? '，失败的可单独重试' : '') + '</div>';
+  btn.disabled = false;
+  $("enrich-actions").hidden = ok === 0;
+}
+
+function renderEnrich() {
+  const list = $("enrich-list");
+  if (!state.segments.length) { list.innerHTML = ""; return; }
+  list.innerHTML = state.segments.map(s => {
+    const p = state.enriched[s.index];
+    const running = state.enrichRunning[s.index];
+    const err = state.enrichErrors[s.index];
+    const badge = p ? '<span class="badge badge-done">已富化</span>'
+      : running ? '<span class="badge badge-run">富化中</span>'
+      : err ? '<span class="badge badge-fail">失败：' + esc(err) + '</span>'
+      : '<span class="badge badge-wait">待富化</span>';
+    return '<div class="seg-card">' +
+      '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' + badge +
+      '<span class="spacer"></span>' +
+      (p ? '<button class="btn btn-ghost btn-sm" onclick="redoEnrich(' + s.index + ', this)">重新富化</button>' : '') +
+      '</div>' +
+      '<div class="seg-text" style="background:none;border:none;padding:0;color:var(--text)">' + esc(s.text.replace(/\n/g, '')) + '</div>' +
+      (p ? '<div class="seg-prompt">' + esc(p) + '</div>' : '') +
+      '</div>';
+  }).join("");
+  $("enrich-actions").hidden = Object.keys(state.enriched).length === 0;
+}
+
+async function redoEnrich(index) {
+  state.enrichRunning[index] = true;
+  renderEnrich();
+  try {
+    await enrichOne(index);
+    delete state.enrichErrors[index];
+    toast("片段 " + index + " 重新富化完成");
+  } catch (e) {
+    toast("片段 " + index + " 富化失败：" + e.message);
+  }
+  delete state.enrichRunning[index];
+  renderEnrich();
+  refreshNav();
+}
+
+/* ═══════════ 5 生成视频 ═══════════ */
+function renderVideo() {
+  const list = $("video-list");
+  if (!state.segments.length) { list.innerHTML = ""; return; }
+  list.innerHTML = state.segments.map(s => {
+    const p = state.enriched[s.index];
+    return '<div class="seg-card" id="vcard-' + s.index + '">' +
+      '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' +
+      '<span class="badge ' + (p ? "badge-done" : "badge-wait") + '">' + (p ? "已富化" : "未富化，先生成表演提示词") + '</span>' +
+      '<span class="spacer"></span>' +
+      (p ? '<button class="btn btn-primary btn-sm" id="vbtn-' + s.index + '" onclick="genVideo(' + s.index + ')">生成视频</button>' : '') +
+      '</div>' +
+      '<div class="seg-text" style="background:none;border:none;padding:0">' + esc(s.text.replace(/\n/g, '')) + '</div>' +
+      '<div id="vstatus-' + s.index + '"></div>' +
+      '</div>';
+  }).join("");
+}
+
+async function genVideo(index) {
+  const seg = state.segments.find(s => s.index === index);
+  const prompt = state.enriched[index];
+  const btn = $("vbtn-" + index), status = $("vstatus-" + index);
+  btn.disabled = true;
+  status.innerHTML = '<div class="skel" style="margin-top:12px"></div><div style="font-size:13px;color:var(--muted)">提交出片任务中…</div>';
+  try {
+    const d = await api("/api/wizard/video", { taskId: state.taskId, index, segmentText: seg.text, visualPrompt: prompt });
+    if (d.error) throw new Error(d.error);
+    status.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-top:12px">片段 ' + index + ' 生成中（Seedance 出片通常 1-3 分钟），每 5 秒自动查询…</div>';
+    pollVideo(index);
+  } catch (e) {
+    status.innerHTML = '<div class="error-box">' + e.message + '</div>';
+    btn.disabled = false;
+  }
+}
+
+function pollVideo(index) {
+  if (state.videoJobs[index]) clearInterval(state.videoJobs[index].timer);
+  const timer = setInterval(async () => {
+    try {
+      const d = await api("/api/wizard/video/" + state.taskId + "/" + index);
+      if (d.status === "done" && d.videoUrl) {
+        clearInterval(timer);
+        const url = d.videoUrl.startsWith("http") ? d.videoUrl : API_BASE + d.videoUrl;
+        $("vstatus-" + index).innerHTML =
+          '<video class="result" src="' + url + '" controls playsinline></video>' +
+          '<div class="row" style="margin-top:10px"><a class="btn btn-ghost btn-sm" href="' + url + '" download>下载片段 ' + index + '</a>' +
+          '<button class="btn btn-ghost btn-sm" onclick="genVideo(' + index + ')">重新生成</button></div>';
+        const btn = $("vbtn-" + index);
+        if (btn) { btn.disabled = false; btn.textContent = "重新生成"; }
+        toast("片段 " + index + " 出片完成");
+      } else if (d.status === "failed") {
+        clearInterval(timer);
+        $("vstatus-" + index).innerHTML = '<div class="error-box">出片失败：' + (d.error || "未知错误") + '</div>';
+        const btn = $("vbtn-" + index);
+        if (btn) btn.disabled = false;
+      }
+    } catch (e) { /* 网络抖动，下轮再查 */ }
+  }, 5000);
+  state.videoJobs[index] = { timer };
+}
+
+/* ═══════════ 初始化 ═══════════ */
+function esc(s) {
+  return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+$("script-box").addEventListener("input", updateScriptChars);
+refreshNav();
+</script>
+</body>
+</html>

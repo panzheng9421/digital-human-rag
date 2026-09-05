@@ -65,6 +65,15 @@ public class VolcengineVideoGenService implements VideoGenerator {
     private final HttpClient http = HttpClient.newHttpClient();
 
     public VolcengineVideoGenService(AppProperties props, String persona) {
+        this(props, persona, 0, null);
+    }
+
+    /**
+     * 带覆盖构造器（向导式出片用）：
+     *   secondsOverride     >0 时覆盖 app.video.seconds（前端 5-30s 动态选时长）
+     *   outputDirOverride   非空时覆盖 app.video.output-dir（每个任务独立子目录，互不污染）
+     */
+    public VolcengineVideoGenService(AppProperties props, String persona, int secondsOverride, String outputDirOverride) {
         AppProperties.Video v = props.getVideo();
         AppProperties.Video.Volcengine volc = v.getVolcengine();
         String envKey = System.getenv("ARK_API_KEY");
@@ -73,11 +82,12 @@ public class VolcengineVideoGenService implements VideoGenerator {
         this.modelId = volc.getModelId();   // 默认 doubao-seedance-2-5
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
         this.referenceAudioUrls = v.getReferenceAudioUrlsFor(persona);
-        this.seconds = v.getSeconds();
+        this.seconds = secondsOverride > 0 ? secondsOverride : v.getSeconds();
         this.resolution = toResolution(v.getSize());
         this.ratio = v.getRatio();
         this.generateAudio = v.isGenerateAudio();
-        this.outputDir = v.getOutputDir();
+        this.outputDir = (outputDirOverride != null && !outputDirOverride.isEmpty())
+                ? outputDirOverride : v.getOutputDir();
         this.retryAttempts = Math.max(0, v.getRetryAttempts());
         String cfgBase = volc.getBaseUrl();
         this.baseUrl = (cfgBase != null && !cfgBase.isEmpty()) ? cfgBase : "https://ark.cn-beijing.volces.com";

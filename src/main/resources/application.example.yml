@@ -7,36 +7,37 @@ app:
   dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
   deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
   docs-dir: ./src/main/resources/docs   # 知识库根目录；实际加载 docs/{persona} 子目录
-  persona: pan        # 人设：pan（老潘）/ anuo（阿诺）；决定用哪套 prompt 与哪个知识库
+  persona: anuo        # 人设：pan（老潘）/ anuo（阿诺）；决定用哪套 prompt 与哪个知识库
   top-k: 3            # 检索召回的片段数
   dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
   temperature: 0.7    # 生成随机度
 
+  # ===== 文生图（工作台模块①，Seedream，复用 ARK key）=====
+  image:
+    model-id: doubao-seedream-4-0-250828   # 方舟文生图模型；可换 doubao-seedream-5-0-lite 等
+
   # ===== 视频生成 =====
-  # 多参考图：公网可访问的 HTTPS URL，YAML 列表格式（每项一个 URL），按提交顺序传给上游。
-  # 默认 3 张：1 张儿童房场景背景图 + 2 张人物图。可用 pan-reference-image-urls / anuo-reference-image-urls 按人设覆盖。
-  # 注意：必须是未登录即可直接返回图片的 URL，勿用网页预览地址/临时登录链接/本地路径。
+  # 参考图：默认 1 张「人物 + 场景一图全含」的已授权真人素材（asset://）。
+  # 未开「已授权真人素材」通道时，方舟禁止直接传真人人脸 URL（报 PrivacyInformation）。
+  # 可用 pan-reference-image-urls / anuo-reference-image-urls 按人设覆盖。
   video:
     # ---- 通用参数（所有引擎共享）----
-    provider: seedance          # 出片引擎：seedance / grok / volcengine
-    seconds: 5                  # 切片时长（秒）；mini 支持 5/10s，方舟/2.5 支持到 30s
-    size: 720                   # 480 / 720 / 1080
-    output-dir: ./output        # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
-    retry-attempts: 1           # 单切片出片失败时的额外重试次数（不含首次）
-    ratio: "16:9"               # 输出比例（方舟专用）：16:9 / 9:16 / 1:1 / adaptive；⚠️ 必须加引号，否则 YAML 会把 16:9 当六十进制数字解析成 969，方舟报 InvalidParameter
-    generate-audio: false       # 是否由模型生成配音（方舟专用）
-    ffmpeg-path: ffmpeg         # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
+    provider: volcengine       # 出片引擎：volcengine（方舟直连，推荐）/ grok / seedance
+    seconds: 30                # 切片时长（秒）；2.5 支持 ≤30s，2.0-mini 硬上限 15s
+    size: 720                  # 480 / 720 / 1080（越贵越清晰，调试用低档）
+    output-dir: ./output       # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
+    retry-attempts: 0          # 单切片出片失败时的额外重试次数（不含首次）
+    ratio: "16:9"              # 输出比例（方舟专用）：16:9 / 9:16 / 1:1 / adaptive；⚠️ 必须加引号，否则 YAML 会把 16:9 当六十进制数字解析成 969
+    generate-audio: true       # 是否由模型生成配音（方舟专用）；false=静音仅环境音
+    ffmpeg-path: ffmpeg        # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
     reference-image-urls:
-      - https://img.triview.cn/ai/4.png
-      - https://img.triview.cn/ai/5.png
-      - https://img.triview.cn/ai/bedroom.jpg
-    # pan-reference-image-urls:    # 老潘专属参考图（示例：夜晚卧室背景覆盖默认白天）
-    #   - https://img.triview.cn/ai/4.png
-    #   - https://img.triview.cn/ai/5.png
-    #   - https://img.triview.cn/ai/bedroom-night.jpg
+      - asset://asset-请替换为你的已授权真人素材id   # 人物+背景一图全含；方舟控制台「真人人像→管理素材」录入授权后获得
+    # pan-reference-image-urls:    # 老潘专属参考图（前 N 张为 asset:// 真人素材，可末张补场景 URL）
+    #   - asset://asset-老潘真人素材id
+    #   - https://img.triview.cn/ai/bedroom-night.png
 
     # ---- 参考音频（方舟 Seedance 2.5 专用，锁定真人音色/口型）----
-    # 填入方舟「素材&虚拟人像库」拿到的 asset:// 音频素材ID（或公网URL/Base64），非空时自动追加
+    # 填入方舟「素材&虚拟人像库」拿到的 asset:// 音频素材ID，非空时自动追加
     # content[].role=reference_audio，并强制 generate_audio=true（静音片传音频无效）。
     # 2.5 约束：单段 [2,30]s、最多 10 段、总时长 ≤30s、wav/mp3、单文件 ≤15MB。
     # reference-audio-urls:
@@ -50,7 +51,7 @@ app:
     seedance:
       base-url: https://new.xlcsh.top/v1/videos
       api-key: ${RELAY_API_KEY:sk-请替换为中转站key}
-      model-id: seedance-2.0-mini   # 中转站可用模型；seedance-2.0-mini 与 seedance-2.5 均可用
+      model-id: seedance-2.5      # seedance-2.5 / seedance-2.0-mini
 
     grok:
       base-url: https://api.x.ai   # 中转站时改为 https://sub.xlcsh.top
@@ -61,6 +62,6 @@ app:
     volcengine:
       base-url: https://ark.cn-beijing.volces.com  # 火山方舟 API 基地址（勿带末尾斜杠）
       api-key: ${ARK_API_KEY:}     # 火山方舟 API Key；为空时回退读环境变量 ARK_API_KEY
-      model-id: doubao-seedance-2-5  # 火山方舟视频模型 ID
+      model-id: doubao-seedance-2-5-260628   # Seedance 2.5 方舟官方ID（横线+日期后缀）；单条时长≤30s，支持真人 asset:// + reference_audio 锁声音
       # ⚠️ 真人肖像限制：未开「已授权真人素材」通道时，doubao-seedance-2-5 不支持直接传真人人脸参考图；
       # 需改用虚拟人 asset://xxx 或已授权真人素材，否则直连官方会被拒。

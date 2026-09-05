@@ -46,6 +46,11 @@ public class GrokVideoGenService implements VideoGenerator {
     private final HttpClient http = HttpClient.newHttpClient();
 
     public GrokVideoGenService(AppProperties props, String persona) {
+        this(props, persona, 0, null);
+    }
+
+    /** 带覆盖构造器（向导式出片用）：secondsOverride>0 覆盖时长（仍夹紧 15s 上限），outputDirOverride 非空覆盖输出目录 */
+    public GrokVideoGenService(AppProperties props, String persona, int secondsOverride, String outputDirOverride) {
         AppProperties.Video v = props.getVideo();
         AppProperties.Video.Grok g = v.getGrok();
         String envKey = System.getenv("XAI_API_KEY");
@@ -54,9 +59,11 @@ public class GrokVideoGenService implements VideoGenerator {
         this.modelId = "grok-imagine-video-1.5";   // Grok 视频模型固定
         this.referenceImageUrls = v.getReferenceImageUrlsFor(persona);
         this.referenceAudioIds = g.getReferenceAudioIds() == null ? List.of() : g.getReferenceAudioIds();
-        this.seconds = Math.min(v.getSeconds(), 15);   // Grok 上限 15s
+        int wantSeconds = secondsOverride > 0 ? secondsOverride : v.getSeconds();
+        this.seconds = Math.min(wantSeconds, 15);   // Grok 上限 15s
         this.resolution = toResolution(v.getSize());
-        this.outputDir = v.getOutputDir();
+        this.outputDir = (outputDirOverride != null && !outputDirOverride.isEmpty())
+                ? outputDirOverride : v.getOutputDir();
         this.retryAttempts = Math.max(0, v.getRetryAttempts());
         String cfgBase = g.getBaseUrl();
         this.baseUrl = (cfgBase != null && !cfgBase.isEmpty()) ? cfgBase : "https://api.x.ai";

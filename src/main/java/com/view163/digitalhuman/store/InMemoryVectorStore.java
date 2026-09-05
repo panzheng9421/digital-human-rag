@@ -17,6 +17,11 @@ public class InMemoryVectorStore implements VectorStore {
     }
 
     @Override
+    public void clear() {
+        records.clear();
+    }
+
+    @Override
     public List<ChunkRecord> getAll() {
         return records;
     }
