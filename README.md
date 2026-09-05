@@ -1,5 +1,13 @@
 # digital-human-rag · 数字分身全自动出片管线
 
+![Java](https://img.shields.io/badge/Java-21-007396?logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.5-6DB33F?logo=springboot&logoColor=white)
+![Maven](https://img.shields.io/badge/Maven-3.9+-C71A36?logo=apachemaven&logoColor=white)
+![LLM](https://img.shields.io/badge/LLM-DeepSeek-4D6BFF?logo=deepseek&logoColor=white)
+![Embedding](https://img.shields.io/badge/Embedding-DashScope--v3-FF6A00?logo=alibabacloud&logoColor=white)
+![Video](https://img.shields.io/badge/Video-Seedance%202.5-0B84FF)
+![license](https://img.shields.io/badge/license-Private-lightgray)
+
 > 给「数字分身」装大脑、再让它开口说话的 Spring Boot 工程：输入一个主题（或一段裸口播稿），自动完成 **RAG 写稿 → 表演富化 → 调视频模型出片 → 自动下载拼接**，产出可直接发布的数字人口播视频。
 >
 > 这是「10 年 Java 架构师从 0 造数字分身」系列的工程化部分。当前出片引擎为**火山方舟 Seedance 2.5 直连**，真人形象走「已授权真人素材」`asset://` 通道。
