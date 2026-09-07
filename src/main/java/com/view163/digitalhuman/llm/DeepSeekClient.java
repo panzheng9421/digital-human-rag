@@ -48,6 +48,10 @@ public class DeepSeekClient {
 
             String json = mapper.writeValueAsString(body);
 
+            // 调试日志：打印发给 DeepSeek 的完整请求体（system+user），方便排查文案风格/结构问题
+            System.out.println("[LLM] ── → DeepSeek 请求（" + json.length() + " 字符）──");
+            System.out.println(json);
+
             HttpRequest req = HttpRequest.newBuilder()
                     .uri(URI.create(URL))
                     .header("Authorization", "Bearer " + apiKey)
@@ -61,7 +65,9 @@ public class DeepSeekClient {
             }
 
             ChatResponse cr = mapper.readValue(resp.body(), ChatResponse.class);
-            return cr.choices.get(0).message.content;
+            String content = cr.choices.get(0).message.content;
+            System.out.println("[LLM] ← DeepSeek 响应（" + content.length() + " 字符）");
+            return content;
         } catch (Exception e) {
             throw new RuntimeException("DeepSeek chat failed", e);
         }

@@ -47,7 +47,7 @@ Web 工作台把出片拆成 **5 个模块**，每一步的主动权都在你手
 
 ## 关键设计点
 
-- **DeepSeek 不提供 embedding**：向量化另接百炼 `text-embedding-v3`（RAG 最常见的坑）。
+- **DeepSeek 不提供 embedding**：向量化另接百炼 `text-embedding-v4`（RAG 最常见的坑）。
 - **MVP 零数据库**：内存向量库，启动即建；换 PGVector 只需实现同一个 `VectorStore` 接口。
 - **向量库每次重建先清空**：`ScriptGenerator.buildKnowledgeBase()` 开头 `store.clear()`，改了知识库文档后重新生成即生效，不会新旧切片混叠。
 - **音色锚定是固定值**：`EnrichPrompt.voiceAnchorFor(persona)` 按 persona 给死（阿诺=青年女声标准普通话；老潘=中年男声京腔），禁止 LLM 编造，保证全片音色一致。
@@ -97,7 +97,7 @@ Web 工作台把出片拆成 **5 个模块**，每一步的主动权都在你手
 
 | 变量 | 用途 | 平台 |
 |---|---|---|
-| `DASHSCOPE_API_KEY` | 向量化 embedding（百炼 `text-embedding-v3`） | 阿里云百炼 DashScope |
+| `DASHSCOPE_API_KEY` | 向量化 embedding（百炼 `text-embedding-v4`） | 阿里云百炼 DashScope |
 | `DEEPSEEK_API_KEY` | 写稿 + 表演富化（对话大模型） | DeepSeek 开放平台 |
 | `ARK_API_KEY` | 火山方舟视频 / 图片生成（或填 yml 的 `volcengine.api-key`） | 火山方舟 |
 
@@ -183,7 +183,7 @@ rag/
 │  ├─ DemoApplication.java          # 入口 + CommandLineRunner，串联 Stage1→4；--raw/--raw-file 解析
 │  ├─ config/AppProperties.java     # app.* 配置（video 下拆 seedance/grok/volcengine 引擎块 + image 块）
 │  ├─ ingest/                       # ① 文档加载 DocumentLoader + 切片 TextSplitter
-│  ├─ embed/                        # ① 百炼 text-embedding-v3 向量化
+│  ├─ embed/                        # ① 百炼 text-embedding-v4 向量化
 │  ├─ store/                        # ① 内存向量库（VectorStore 接口 + InMemory 实现 + clear()）
 │  ├─ retrieve/Retriever.java       # ① 余弦相似 top-k 召回
 │  ├─ llm/DeepSeekClient.java       # ①⑤ DeepSeek Chat（写稿/富化共用）

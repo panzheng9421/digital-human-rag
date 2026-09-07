@@ -9,7 +9,7 @@ app:
   docs-dir: ./src/main/resources/docs   # 知识库根目录；实际加载 docs/{persona} 子目录
   persona: anuo        # 人设：pan（老潘）/ anuo（阿诺）；决定用哪套 prompt 与哪个知识库
   top-k: 3            # 检索召回的片段数
-  dimension: 1024     # 向量维度，需与百炼 text-embedding-v3 一致
+  dimension: 1024     # 向量维度，需与百炼 text-embedding-v4 一致
   temperature: 0.7    # 生成随机度
 
   # ===== 文生图（工作台模块①，Seedream，复用 ARK key）=====

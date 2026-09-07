@@ -59,8 +59,15 @@ public class ScriptGenerator {
 
     /** 给定主题与人设，检索上下文并生成口播稿 */
     public String generate(String topic, String persona) {
+        System.out.println("[RAG] ── 生成文案入参 ── topic=\"" + topic + "\", persona=" + persona + ", topK=" + topK);
         float[] qv = embedder.embed(topic);
         List<ChunkRecord> ctx = retriever.retrieve(store, qv, topK);
+        System.out.println("[RAG] 召回 " + ctx.size() + " 段参考素材：");
+        for (ChunkRecord c : ctx) {
+            String prev = c.getText().replaceAll("\\s+", " ");
+            if (prev.length() > 50) prev = prev.substring(0, 50) + "…";
+            System.out.println("[RAG]   · " + prev);
+        }
         String user = promptBuilder.buildUser(topic, ctx);
         return llm.chat(promptBuilder.buildSystem(persona), user);
     }

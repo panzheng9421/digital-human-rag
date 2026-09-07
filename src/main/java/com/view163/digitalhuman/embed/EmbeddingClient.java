@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 向量化客户端：调用阿里云百炼 text-embedding-v3（OpenAI 兼容模式）。
+ * 向量化客户端：调用阿里云百炼 text-embedding-v4（OpenAI 兼容模式）。
  * 注意：DeepSeek 不提供 embedding，必须单独接一个向量模型。
  */
 @Component
@@ -37,7 +37,7 @@ public class EmbeddingClient {
     public float[] embed(String text) {
         try {
             Map<String, Object> body = new LinkedHashMap<>();
-            body.put("model", "text-embedding-v3");
+            body.put("model", "text-embedding-v4");
             body.put("input", text);
             body.put("dimensions", dimension);
             String json = mapper.writeValueAsString(body);

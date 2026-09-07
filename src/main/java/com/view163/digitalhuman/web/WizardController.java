@@ -243,7 +243,8 @@ public class WizardController {
 
     private static String normalizePersona(String p) {
         String v = p == null ? "" : p.trim().toLowerCase();
-        return "pan".equals(v) ? "pan" : "anuo";
+        if ("pan".equals(v) || "kaka".equals(v) || "samuel".equals(v)) return v;
+        return "anuo";
     }
 
     private static int totalSegments(WizardSession s) {
