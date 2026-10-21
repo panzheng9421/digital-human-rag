@@ -101,20 +101,85 @@
     padding: 22px;
     margin-bottom: 16px;
   }
-  .home-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  /* 工作台卡片：2 列等宽，行高拉平，图标/标题/描述/状态行四段对齐 */
+  .home-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px; grid-auto-rows: 1fr;
+  }
   .home-card {
+    display: flex; flex-direction: column; align-items: flex-start;
+    height: 100%; min-height: 168px; box-sizing: border-box;
     background: var(--panel); border: 1px solid var(--line);
-    border-radius: var(--radius-card); padding: 24px;
+    border-radius: var(--radius-card); padding: 22px 24px;
     cursor: pointer; transition: border-color .15s ease, transform .15s ease;
     text-align: left; font-family: inherit; width: 100%;
   }
   .home-card:hover { border-color: var(--accent); transform: translateY(-2px); }
   .home-card:active { transform: translateY(0); }
-  .home-card.wide { grid-column: 1 / -1; }
-  .home-ico { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-tint); color: var(--accent-deep); display: grid; place-items: center; margin-bottom: 14px; }
+  .home-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--accent-tint); color: var(--accent-deep); display: grid; place-items: center; margin-bottom: 14px; }
   .home-ico svg { width: 18px; height: 18px; }
-  .home-card h3 { font-size: 15.5px; margin-bottom: 5px; }
-  .home-card p { font-size: 13px; color: var(--muted); line-height: 1.65; }
+  .home-card h3 { flex: none; font-size: 15.5px; font-weight: 700; margin: 0 0 6px; line-height: 1.4; }
+  .home-card p { font-size: 13px; color: var(--muted); line-height: 1.65; margin: 0; }
+  .home-card .home-tag {
+    flex: none; margin: 12px 0 0; padding-top: 12px;
+    border-top: 1px dashed var(--line);
+    font-size: 12px; color: var(--accent-deep); font-weight: 600;
+    width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  /* 只有状态行的卡片（配音）把状态行压到卡底，与其它卡底部齐平 */
+  .home-card:has(.home-tag) p:not(.home-tag) { flex: 1 1 auto; }
+
+  /* ───── 台词配音序列：一句一行，行序＝台词顺序 ───── */
+  .say-list { display: flex; flex-direction: column; gap: 8px; }
+  .say-row {
+    display: flex; align-items: center; gap: 12px;
+    border: 1px solid var(--line); border-radius: var(--radius-ctl);
+    background: var(--panel); padding: 11px 14px;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .say-row:hover { border-color: var(--line-strong); }
+  .say-no {
+    width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+    display: grid; place-items: center; font-size: 12.5px; font-weight: 700;
+    background: var(--accent); color: #fff;
+  }
+  .say-row.unqueued .say-no { background: #f0ede8; color: var(--muted); }
+  .say-main { flex: 1; min-width: 0; }
+  .say-name {
+    font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .say-meta { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .say-ops { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .say-move {
+    width: 28px; height: 28px; display: grid; place-items: center;
+    border: 1px solid var(--line); border-radius: 7px; background: var(--panel);
+    color: var(--muted); cursor: pointer; font-family: inherit; font-size: 13px; line-height: 1;
+  }
+  .say-move:hover:not(:disabled) { color: var(--accent-deep); border-color: var(--accent); }
+  .say-move:disabled { opacity: .35; cursor: default; }
+  .say-add {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    padding: 15px; cursor: pointer; font-family: inherit;
+    border: 1px dashed var(--line-strong); border-radius: var(--radius-ctl);
+    background: transparent; color: var(--muted); width: 100%;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .say-add:hover { border-color: var(--accent); color: var(--accent-deep); background: var(--accent-tint); }
+  .say-add-plus { font-size: 20px; line-height: 1; font-weight: 300; }
+  .say-add-title { font-size: 13.5px; font-weight: 600; }
+  .say-add-hint { font-size: 12px; }
+  .say-summary {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    font-size: 12.5px; color: var(--muted); margin-bottom: 12px;
+  }
+  .say-summary b { color: var(--accent-deep); font-size: 14px; }
+  .tag-ok {
+    font-size: 11.5px; font-weight: 600; color: var(--ok);
+    background: var(--ok-tint); border-radius: 999px; padding: 1px 9px; flex-shrink: 0;
+  }
+  .btn-danger { color: var(--muted); }
+  .btn-danger:hover { color: var(--err); border-color: var(--err); }
 
   /* ───── 表单控件 ───── */
   .field { margin-bottom: 16px; }
@@ -237,8 +302,8 @@
       <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="ejYvCp52Rmw8uZmqzzrpCp"><path d="M3 10.5 12 3l9 7.5" data-page-node-id="Zu4Z3zOnCZdQ1NwmsE4sET"/><path d="M5 9.5V21h14V9.5" data-page-node-id="rKosbEbCkJAD85RAc8B4n8"/></svg>
       工作台
     </button>
-    <button class="side-item" data-page="img" onclick="go('img')" data-page-node-id="gPlST7vyL4Cb48s8N8vB4t">
-      <span class="side-num" data-page-node-id="rcJFaloKQP3VR8UQDMZpAj">1</span> 文生图
+    <button class="side-item" data-page="audio" id="nav-audio" onclick="go('audio')" data-page-node-id="navAudio">
+      <span class="side-num" data-page-node-id="numAudio">1</span> 配音生视频
     </button>
     <button class="side-item" data-page="script" onclick="go('script')" data-page-node-id="v1S83ENcAZYJN7zfzyG7iQ">
       <span class="side-num" data-page-node-id="al32yNy5Z0xfBqyagh0Od1">2</span> 文案
@@ -252,6 +317,11 @@
     <button class="side-item" data-page="video" id="nav-video" onclick="go('video')" data-page-node-id="HEqH6h2UvjqMEOHHbeaJAr">
       <span class="side-num" data-page-node-id="Mlz39lwCwRGpXX8CUAXE19">5</span> 生成视频
     </button>
+    <div class="side-label" style="margin-top:14px" data-page-node-id="toolLabel">工具</div>
+    <button class="side-item" data-page="img" onclick="go('img')" data-page-node-id="gPlST7vyL4Cb48s8N8vB4t">
+      <svg class="side-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 15-4.5-4.5L8 19"/></svg>
+      文生图
+    </button>
   </nav>
 
   <main class="main" data-page-node-id="JLvgpsfPAV9getk4ReQFF3">
@@ -260,11 +330,12 @@
     <section class="page active" id="page-home" data-page-node-id="Q6VBGWl7Bqqgha9pKI7BAi">
       <h1 data-page-node-id="HjftDsBzyZyMiahA8n7xPT">工作台</h1>
       <p class="sub" data-page-node-id="f9SZeRXwSCgBDCKTEvUlwf">选择一种方式开始制作你的数字人口播视频。</p>
+
       <div class="home-grid" data-page-node-id="WlYpArrV8f7xIVmd3wIZg4">
-        <button class="home-card" onclick="go('img')" data-page-node-id="mlDEE8qL6llBCBsDRpSOo5">
-          <div class="home-ico" data-page-node-id="V4asnFBO4RaSPoSgABpP0f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="L6AWe605TlzHTDJqa03HnW"><rect x="3" y="4" width="18" height="16" rx="2" data-page-node-id="TkjefBqdqRgL6PLb8lqWRg"/><circle cx="9" cy="10" r="1.6" data-page-node-id="zGEORQVcvCdC4zG3J2QNlc"/><path d="m21 15-4.5-4.5L8 19" data-page-node-id="sTRYD7BSbi7lU4NE96Yi2k"/></svg></div>
-          <h3 data-page-node-id="obHCxq74FyPZ0yEKE6DLhN">文生图</h3>
-          <p data-page-node-id="qmWH7jtcSvJ921fS4J7kYs">输入一段提示词，调用方舟 Seedream 生成参考图或场景图，可直接下载用作视频参考素材。</p>
+        <button class="home-card" onclick="go('audio')" data-page-node-id="audioCard">
+          <div class="home-ico" data-page-node-id="audioIco"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1M12 19v3M8 22h8"/></svg></div>
+          <h3 data-page-node-id="audioTitle">配音生视频</h3>
+          <p data-page-node-id="audioDesc">上传每句台词的配音（第一句、第二句…），调用本地 MiniMax H3 逐句生成视频。</p>
         </button>
         <button class="home-card" onclick="go('script')" data-page-node-id="hpIUCPiB2f8ATSrWDHyoQe">
           <div class="home-ico" data-page-node-id="p9zQ7bRlGxz6iVwRsH95Q8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="GdBg5BTYzsfMqfvn4m9xJe"><path d="M12 20h9" data-page-node-id="ZT9jkWNirR5QpkGLPnos0H"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" data-page-node-id="iTE4e66pkDebnRK9GHve5I"/></svg></div>
@@ -274,18 +345,58 @@
         <button class="home-card" onclick="go('slice')" data-page-node-id="JQjDNyBHfjWLQOamKWo7ZC">
           <div class="home-ico" data-page-node-id="MeiLtrFacNSL9wQSEnQGn7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="tCdXWCi2YaZqErPBFfkWb2"><circle cx="6" cy="6" r="2.6" data-page-node-id="7vinmONxOpZM6CoPDJJNKG"/><circle cx="6" cy="18" r="2.6" data-page-node-id="3Ft72eelycxKGJnmz0ddv8"/><path d="M20 4 8.6 15.4M14.5 9.5 20 20M8.6 8.6 12 12" data-page-node-id="RgzXeI5gqVhHXoovpR8zEA"/></svg></div>
           <h3 data-page-node-id="BJq0xLhoejr7vNVBLN2fqb">切片</h3>
-          <p data-page-node-id="CeEC9Ye8Oul2gaQ7CiqWfI">选择每段时长（5-30 秒），按语速自动把口播稿切成多段分镜，每段可单独修改。</p>
+          <p data-page-node-id="CeEC9Ye8Oul2gaQ7CiqWfI">按配音实际时长自动切分（没配音时才按手选的 5–30 秒），把口播稿切成多段分镜，每段可单独改。</p>
         </button>
         <button class="home-card" onclick="go('enrich')" data-page-node-id="0eP0I8X1PwHe1o4e5MS2nx">
           <div class="home-ico" data-page-node-id="ldieREtSeC9n0HRrC0BiTp"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="qxn4nRlgtyJEd347mOqK0N"><path d="M15 4V2m0 20v-2M9.5 9.5 3 21l12-6.5M15 15l6-12-12 6.5" data-page-node-id="Ts56McsEuFfIw48WBpLNmN"/><path d="M18 4v4M16 6h4" data-page-node-id="KtOcbi4xvjuxTiayHGzv7L"/></svg></div>
           <h3 data-page-node-id="0716fD4Y6YqHwy5KQN6fAg">导演富化</h3>
-          <p data-page-node-id="ySobDXA8hT84pqHzghMFKA">一键把所有切片扩写成八段结构的表演提示词（画面、动作、台词节奏、音色），逐段可重做。</p>
+          <p data-page-node-id="ySobDXA8hT84pqHzghMFKA">一键把切片扩写成八段结构的表演提示词（画面、动作、台词节奏、音色），逐段可重做。</p>
         </button>
-        <button class="home-card wide" onclick="go('video')" data-page-node-id="BGE9SApGfnu6dIeE2Cijhg">
+        <button class="home-card" onclick="go('video')" data-page-node-id="BGE9SApGfnu6dIeE2Cijhg">
           <div class="home-ico" data-page-node-id="jJlaTGED2Ar8hpAwexkDBd"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="YSIch2dYTEtQ4rTeOmzSbL"><rect x="2" y="5" width="14" height="14" rx="2.5" data-page-node-id="a0LtuT5XT73pv7zktCgINC"/><path d="m16 10 6-3.5v11L16 14" data-page-node-id="8bJqiAHwOIanRbCDmy8ACu"/></svg></div>
           <h3 data-page-node-id="8OnTNdEtbi1bFVwJVrBIWw">生成视频</h3>
-          <p data-page-node-id="Qx8cvsiDF9I52aRtqN16bD">主动权在你手里：点哪段生成哪段，每段独立出片、页面内直接播放和下载，不满意单独重做。</p>
+          <p data-page-node-id="Qx8cvsiDF9I52aRtqN16bD">点哪段生成哪段，每段独立出片、页面内直接播放和下载，不满意单独重做。</p>
         </button>
+        <button class="home-card" onclick="go('img')" data-page-node-id="mlDEE8qL6llBCBsDRpSOo5">
+          <div class="home-ico" data-page-node-id="V4asnFBO4RaSPoSgABpP0f"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" data-page-node-id="L6AWe605TlzHTDJqa03HnW"><rect x="3" y="4" width="18" height="16" rx="2" data-page-node-id="TkjefBqdqRgL6PLb8lqWRg"/><circle cx="9" cy="10" r="1.6" data-page-node-id="zGEORQVcvCdC4zG3J2QNlc"/><path d="m21 15-4.5-4.5L8 19" data-page-node-id="sTRYD7BSbi7lU4NE96Yi2k"/></svg></div>
+          <h3 data-page-node-id="obHCxq74FyPZ0yEKE6DLhN">文生图</h3>
+          <p data-page-node-id="qmWH7jtcSvJ921fS4J7kYs">输入提示词，调用方舟 Seedream 生成参考图或场景图，可直接下载用作视频参考素材。</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- ═══════ 1 配音（流程第 1 步：选/传配音 = 时长基准）═══════ -->
+    <section class="page" id="page-audio" data-page-node-id="pageAudio">
+      <h1 data-page-node-id="audioPageTitle">配音生视频</h1>
+      <p class="sub" data-page-node-id="audioPageSub">把每一句台词单独配好音传上来：第一句、第二句、第三句…按顺序排好。切片按句数分段，H3 跟着这句的声音出片。</p>
+
+      <div class="card" data-page-node-id="audioPersonaCard">
+        <div class="field" style="margin-bottom:0">
+          <label>数字人 <span class="hint">不同人设可以有各自的一套台词配音</span></label>
+          <select id="audio-persona" onchange="setPersona(this.value)">
+            <option value="anuo">阿诺</option>
+            <option value="pan">老潘</option>
+            <option value="kaka">卡卡</option>
+            <option value="samuel">游牧人</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card" data-page-node-id="audioPickCard">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px">
+          <label style="margin:0">台词配音 <span class="hint">行序就是台词顺序，↑↓ 可调整</span></label>
+          <button class="btn btn-ghost btn-sm" onclick="renderAudioTracks()">刷新</button>
+        </div>
+        <div class="say-summary" id="audio-summary"></div>
+        <div class="say-list" id="audio-track-list">读取中…</div>
+        <input type="file" id="audio-file" accept=".wav,.mp3,.m4a,.flac,.aac,.ogg" multiple style="display:none" onchange="uploadAudio()">
+        <div id="audio-status" style="margin-top:10px"></div>
+        <p class="hint" style="margin:10px 0 0">支持一次多选，按选择顺序依次排到末尾。</p>
+      </div>
+
+      <div class="row" style="justify-content:space-between">
+        <button class="btn btn-ghost" onclick="go('home')">← 返回工作台</button>
+        <button class="btn btn-primary" onclick="go('enrich')">下一步：导演富化 →</button>
       </div>
     </section>
 
@@ -326,7 +437,7 @@
           <div class="field" style="margin-bottom:0" data-page-node-id="iniEQw4EeAJsCyME6Sh7Cn">
             <label style="margin-bottom:0" data-page-node-id="k3wSAQAhP9e5HHtt9ISeNL">数字人</label>
           </div>
-          <select id="script-persona" data-page-node-id="F0pOBpD5fFv5WkGG3UGLlR">
+          <select id="script-persona" onchange="setPersona(this.value)" data-page-node-id="F0pOBpD5fFv5WkGG3UGLlR">
             <option value="anuo" data-page-node-id="S1K91HB56slzmiK1lSkmpU">阿诺</option>
             <option value="pan" data-page-node-id="Xhy3HOLss1cC4JEYqJUc9v">老潘</option>
             <option value="kaka">卡卡</option>
@@ -352,7 +463,7 @@
     <!-- ═══════ 3 切片 ═══════ -->
     <section class="page" id="page-slice" data-page-node-id="yHMz6kJMy82VhWiQ7hJSV5">
       <h1 data-page-node-id="n6pvJBvQM9y7gM9e0uuu9H">切片</h1>
-      <p class="sub" data-page-node-id="ilPImQoo1N1XnL4wkwtfRm">选择每段时长，按口播语速（约 5 字/秒）自动切分，每段可单独编辑。</p>
+      <p class="sub" data-page-node-id="ilPImQoo1N1XnL4wkwtfRm">配了配音时按配音实际时长切分（下面的下拉不生效，时长以工作台的配音为准）；没配配音才按这里选的时长，按口播语速（约 5 字/秒）自动切分。也可以手动添加、删除、调整每段顺序，每段可单独编辑。</p>
       <div class="card" data-page-node-id="E1R2t0B2OOAvwWKW04l1Y8">
         <div class="row" data-page-node-id="U1yx7PmhAwjuMoXqd8WpPk">
           <div data-page-node-id="CoKnC7bKV0d2wzBvrTAtCU">
@@ -360,10 +471,10 @@
             <select id="slice-seconds" data-page-node-id="F0fQOPIuuCOADsgOXzJnqp">
               <option value="5" data-page-node-id="iemHoVV9Gc7ORJSSEsUAMm">5 秒</option>
               <option value="10" data-page-node-id="ZoCwoFF6AOeaydtVIlCP3o">10 秒</option>
-              <option value="15" selected data-page-node-id="9P61FzVFQU0GskeGtYIcci">15 秒</option>
+              <option value="15" data-page-node-id="9P61FzVFQU0GskeGtYIcci">15 秒（H3 单段上限）</option>
               <option value="20" data-page-node-id="ZXDeFuLxqEboHDt804IRx9">20 秒</option>
               <option value="25" data-page-node-id="aCuQ9nasoMAWjAj8LQdaWB">25 秒</option>
-              <option value="30" data-page-node-id="2mG6FQuA7nHTQA7qaTuLzi">30 秒</option>
+              <option value="30" selected data-page-node-id="2mG6FQuA7nHTQA7qaTuLzi">30 秒（默认）</option>
             </select>
           </div>
           <button class="btn btn-primary" id="slice-btn" style="margin-top:22px" onclick="doSlice()" data-page-node-id="A6fVK9PjtwyF5QpDmAQ1wr">开始切片</button>
@@ -371,6 +482,10 @@
         <div id="slice-status" data-page-node-id="1NFxxBkq5ZjYrbEPhECvO9"></div>
       </div>
       <div id="slice-list" data-page-node-id="GTuZWwAFv977CehnBQ9bfN"></div>
+      <div id="slice-add-row" style="margin-top:2px" data-page-node-id="sliceAddRow">
+        <button class="btn btn-ghost btn-sm" onclick="addSegment()" data-page-node-id="sliceAddBtn">＋ 手动添加切片</button>
+        <span style="font-size:12px;color:var(--muted);margin-left:10px">可以在任意片段后面插入，也可以直接加在末尾</span>
+      </div>
       <div class="row" id="slice-actions" hidden style="margin-top:6px" data-page-node-id="cOEbNmGifrF6UfzVQ3nHMv">
         <button class="btn btn-primary" onclick="go('enrich')" data-page-node-id="BojrR1GAMcnHlgJpG26zL3">下一步：导演富化</button>
         <button class="btn btn-ghost btn-sm" onclick="doSlice()" data-page-node-id="tEmPPIAQYemG3YKeDLzGca">重新切片</button>
@@ -397,7 +512,7 @@
     <!-- ═══════ 5 生成视频 ═══════ -->
     <section class="page" id="page-video" data-page-node-id="O54qMAw1zJ89dycAO5N7wa">
       <h1 data-page-node-id="DcaPe40CpNflebCtubL3pT">生成视频</h1>
-      <p class="sub" data-page-node-id="Zujm0pdF1jVVlK83QzjVOT">点哪段生成哪段，每段独立出片（方舟 Seedance），完成后页面内直接播放。生成中可切走，回来还在跑。</p>
+      <p class="sub" data-page-node-id="Zujm0pdF1jVVlK83QzjVOT">点哪段生成哪段，每段独立出片（本地 H3 · ComfyUI）。单镜时长按配音实际长度走（工作台上传/更换，约 15.1 秒以上的自动拆子段拼接）；正式档 1344×768 / 8 步 / 挂 ref2v 8step LoRA，出片后自动走 2x 超分（2688×1536）。生成中可切走，回来还在跑，正式档耗时按十几分钟计。</p>
       <div id="video-list" data-page-node-id="ONNnezKmWTJTAujabAh2AY"></div>
     </section>
 
@@ -413,40 +528,58 @@ const API_BASE = "http://localhost:8080";   // 部署到 ECS 后改成你的域�
 /* ═══════════ 全局状态 ═══════════ */
 const state = {
   taskId: null,
+  persona: "anuo",     // 全局人设：文案页 / 配音页 / 卡片状态共用同一个，避免各处不一致
   script: "",
-  seconds: 15,
-  segments: [],        // [{index, text, chars}]
-  enriched: {},        // index -> visualPrompt
-  enrichRunning: {},   // index -> true（富化进行中）
-  enrichErrors: {},    // index -> 错误信息
-  videoJobs: {},       // index -> {timer}
+  seconds: 30,
+  audioSeconds: null,  // 台词序列合计秒数（各句向上取整后相加）
+  audioName: "",       // 台词序列描述（单句=文件名，多句=「共 N 句台词」）
+  audioCount: 0,       // 台词句数（切片按这个数分段）
+  segments: [],        // [{uid, index, text, chars}]  uid 稳定不变，index 随顺序重排
+  enriched: {},        // uid -> visualPrompt
+  enrichRunning: {},   // uid -> true（富化进行中）
+  enrichErrors: {},    // uid -> 错误信息
+  videoJobs: {},       // uid -> {timer}
 };
 
 /* ═══════════ 导航 ═══════════ */
-const PAGES = ["home", "img", "script", "slice", "enrich", "video"];
+const PAGES = ["home", "audio", "img", "script", "slice", "enrich", "video"];
 
 function unlocked(page) {
   if (page === "slice")  return !!state.taskId || $("script-box").value.trim().length > 0;
-  if (page === "enrich") return state.segments.length > 0;
+  // 富化页允许无分段进入：进入后页面提供「粘贴配音台词 + 按配音时长分段」入口（音频优先流程）
+  if (page === "enrich") return true;
   if (page === "video")  return Object.keys(state.enriched).length > 0;
   return true;
 }
 
-function go(page) {
+async function go(page) {
   if (!unlocked(page)) {
     const need = { slice: "请先输入或生成文案", enrich: "请先在第 3 步完成切片", video: "请先在第 4 步富化至少一段" };
     toast(need[page] || "该步骤未解锁");
     return;
   }
+  if (page === "enrich" && !(await checkSliceReady())) return;
   PAGES.forEach(p => {
     document.getElementById("page-" + p).classList.toggle("active", p === page);
     const nav = document.querySelector('.side-item[data-page="' + p + '"]');
     if (nav) nav.classList.toggle("active", p === page);
   });
-  if (page === "enrich") renderEnrich();
+  if (page === "enrich") { syncAudioSeq().then(renderEnrich); }
   if (page === "video") renderVideo();
+  // 配音页：列出候选配音
+  if (page === "audio") renderAudioTracks();
   // 切片页：按实际状态同步按钮显隐（防止历史残留）
   if (page === "slice") $("slice-actions").hidden = state.segments.length === 0;
+}
+
+/** 同步台词序列概览（句数 / 合计秒数）：富化页要按句数分段，得先知道有几句 */
+async function syncAudioSeq() {
+  try {
+    const d = await api("/api/wizard/audio?persona=" + encodeURIComponent(state.persona || "anuo"));
+    state.audioCount = d.count || 0;
+    state.audioSeconds = d.totalSeconds;
+    state.audioName = state.audioCount > 1 ? ("共 " + state.audioCount + " 句台词") : (d.name || "");
+  } catch (e) { /* 接口挂了就沿用上一次的值 */ }
 }
 
 function refreshNav() {
@@ -491,6 +624,135 @@ async function api(path, body) {
 function skeleton(el, lines) {
   el.hidden = false;
   el.innerHTML = Array.from({ length: lines }, () => '<div class="skel" style="width:' + (60 + Math.random() * 35) + '%"></div>').join("");
+}
+
+/* ═══════════ 配音（流程第 1 步：选/传配音 = 时长基准）═══════ */
+let audioTracks = [];
+
+/** 切人设：文案页 / 配音页两个下拉共用同一个 state.persona */
+function setPersona(v) {
+  state.persona = v || "anuo";
+  const a = $("audio-persona"), s = $("script-persona");
+  if (a && a.value !== state.persona) a.value = state.persona;
+  if (s && s.value !== state.persona) s.value = state.persona;
+  state.audioSeconds = null;
+  state.audioName = "";
+  state.audioCount = 0;
+  if (document.getElementById("page-audio").classList.contains("active")) renderAudioTracks();
+}
+
+/** 一句台词配音的一行：序号＝台词顺序，↑↓ 调序，✕ 删除（仅上传的） */
+function audioRowHtml(t, i, total) {
+  const seq = t.seq || 0;
+  const queued = seq > 0;
+  return `
+    <div class="say-row${queued ? "" : " unqueued"}">
+      <div class="say-no">${queued ? seq : "–"}</div>
+      <div class="say-main">
+        <div class="say-name" title="${esc(t.name)}">${esc(t.name)}${queued
+          ? `<span class="tag-ok">第 ${seq} 句</span>`
+          : '<span class="tag-ok" style="color:var(--muted);background:#f0ede8">未排入</span>'}</div>
+        <div class="say-meta">${t.seconds == null ? "时长探测失败" : t.seconds + " 秒"} · ${t.sizeMb || "?"} MB · ${t.source === "upload" ? "本页上传" : "配置文件"}${queued ? " · 出片第 " + seq + " 段挂它" : ""}</div>
+      </div>
+      <div class="say-ops">
+        <button class="say-move" title="上移" ${i === 0 ? "disabled" : ""} onclick="moveAudio(${i}, -1)">↑</button>
+        <button class="say-move" title="下移" ${i === total - 1 ? "disabled" : ""} onclick="moveAudio(${i}, 1)">↓</button>
+        ${t.source === "upload" ? `<button class="say-move" title="删除" onclick="deleteAudioTrack(${i})">✕</button>` : ""}
+      </div>
+    </div>`;
+}
+
+/** 配音页：台词序列（一句一行，行序＝台词顺序）+ 末尾「上传台词配音」 */
+async function renderAudioTracks() {
+  const persona = $("audio-persona").value || state.persona || "anuo";
+  state.persona = persona;
+  const box = $("audio-track-list"), sum = $("audio-summary");
+  box.innerHTML = '<div style="font-size:13px;color:var(--muted)">读取中…</div>';
+  const addRow = `
+    <button class="say-add" onclick="document.getElementById('audio-file').click()">
+      <span class="say-add-plus">+</span>
+      <span class="say-add-title">上传台词配音</span>
+      <span class="say-add-hint">wav / mp3 · 可多选 · 按选择顺序排到末尾</span>
+    </button>`;
+  try {
+    const d = await api("/api/wizard/audio/list?persona=" + encodeURIComponent(persona));
+    if (d.error) throw new Error(d.error);
+    // seq>0 的按台词顺序排前面，未排入的排后面
+    audioTracks = (d.tracks || []).slice().sort((a, b) => (a.seq || 999) - (b.seq || 999));
+    const n = audioTracks.filter(t => t.seq > 0).length;
+    const total = d.totalSeconds;
+    state.audioSeconds = total;
+    sum.innerHTML = n
+      ? '<span>共 <b>' + n + '</b> 句台词</span>'
+        + '<span>合计 <b>' + (total == null ? "时长探测失败" : total + " 秒") + '</b></span>'
+        + '<span>切片按句数分 ' + n + ' 段</span>'
+      : '<span>还没有台词配音 —— 点下面「上传台词配音」，第一句传第一条</span>';
+    box.innerHTML = audioTracks.map((t, i) => audioRowHtml(t, i, audioTracks.length)).join("") + addRow;
+  } catch (e) {
+    sum.innerHTML = "";
+    box.innerHTML = '<div class="error-box">读取台词配音失败：' + e.message + '</div>' + addRow;
+  }
+}
+
+/** 上移/下移一句台词：整表回写顺序 */
+async function moveAudio(i, dir) {
+  const j = i + dir;
+  if (j < 0 || j >= audioTracks.length) return;
+  const arr = audioTracks.slice();
+  const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+  try {
+    const d = await api("/api/wizard/audio/sequence", {
+      persona: $("audio-persona").value, paths: arr.map(t => t.path)
+    });
+    if (d.error) throw new Error(d.error);
+    toast("台词顺序已更新：现在是第 " + (j + 1) + " 句");
+    await renderAudioTracks();
+  } catch (e) { toast("排序失败：" + e.message); }
+}
+
+/** 上传（支持一次多选）：每条自动追加到台词序列末尾，顺序＝选择顺序 */
+async function uploadAudio() {
+  const input = $("audio-file");
+  const files = Array.from(input.files || []);
+  const status = $("audio-status");
+  if (!files.length) return;
+  let ok = 0;
+  const fails = [];
+  for (let i = 0; i < files.length; i++) {
+    status.innerHTML = '<div style="font-size:13px;color:var(--muted)">上传中 ' + (i + 1) + "/" + files.length + "：" + esc(files[i].name) + "</div>";
+    try {
+      const fd = new FormData();
+      fd.append("file", files[i]);
+      fd.append("persona", $("audio-persona").value);
+      fd.append("activate", "true");
+      const resp = await fetch(API_BASE + "/api/wizard/audio", { method: "POST", body: fd });
+      const d = await resp.json();
+      if (!resp.ok || d.error) throw new Error(d.error || ("HTTP " + resp.status));
+      ok++;
+    } catch (e) {
+      fails.push(files[i].name + "：" + e.message);
+    }
+  }
+  input.value = "";
+  if (fails.length) {
+    status.innerHTML = '<div class="error-box">成功 ' + ok + " 句，失败 " + fails.length + " 句：" + esc(fails.join("；")) + "</div>";
+  } else {
+    status.innerHTML = '<div style="font-size:13px;color:var(--ok)">已追加 ' + ok
+      + " 句到台词序列末尾 —— 顺序不对用 ↑↓ 调；进「导演富化」会按句数分段</div>";
+  }
+  await renderAudioTracks();
+}
+
+async function deleteAudioTrack(i) {
+  const t = audioTracks[i];
+  if (!t) return;
+  if (!confirm("删除第 " + (t.seq || "?") + " 句「" + t.name + "」？文件会从磁盘上移除，后面的句子自动顺延。")) return;
+  try {
+    const d = await api("/api/wizard/audio/delete", { persona: $("audio-persona").value, path: t.path });
+    if (d.error) throw new Error(d.error);
+    toast("已删除这一句");
+    await renderAudioTracks();
+  } catch (e) { toast("删除失败：" + e.message); }
 }
 
 /* ═══════════ 1 文生图 ═══════════ */
@@ -557,11 +819,48 @@ function updateScriptChars() {
 }
 
 /* ═══════════ 3 切片 ═══════════ */
+let uidSeq = 0;
+const newUid = () => "sg" + (++uidSeq);
+
+const charsMeta = s => s.chars ? (s.chars + " 字 · 约 " + Math.max(1, Math.round(s.chars / 5)) + " 秒") : "未填写";
+
+function renumber() {
+  state.segments.forEach((s, i) => { s.index = i + 1; });
+}
+
+/** 整表回写服务端：让富化时的「共 N 段 / 上一段结尾」跟页面一致 */
+async function syncSegments() {
+  clearTimeout(syncSegments._t);
+  if (!state.segments.length && !state.taskId) return;
+  try {
+    const d = await api("/api/wizard/segments", {
+      taskId: state.taskId,
+      script: $("script-box").value.trim(),
+      persona: $("script-persona").value,
+      segments: state.segments.map(s => s.text || ""),
+    });
+    if (d.error) throw new Error(d.error);
+    if (d.taskId) state.taskId = d.taskId;
+  } catch (e) {
+    toast("切片同步失败：" + e.message);
+  }
+}
+
+function scheduleSync() {
+  clearTimeout(syncSegments._t);
+  syncSegments._t = setTimeout(syncSegments, 700);
+}
+
 async function doSlice() {
   if (!state.taskId && !$("script-box").value.trim()) { toast("请先输入或生成文案"); return; }
   const seconds = parseInt($("slice-seconds").value, 10);
   const script = $("script-box").value.trim();
   if (!script) { toast("口播稿为空"); return; }
+  const old = state.segments.map(s => s.text).filter(t => t && t.trim());
+  if (old.length) {
+    // 重新切片会覆盖手动排好的分段，先确认一下
+    if (!confirm("重新切片会覆盖当前 " + state.segments.length + " 段（含手动添加/调整过的），继续？")) return;
+  }
   const btn = $("slice-btn"), status = $("slice-status");
   btn.disabled = true;
   skeleton(status, 3);
@@ -571,15 +870,15 @@ async function doSlice() {
     // 后端可能新建了会话（手动输入文案时），更新 taskId
     if (d.taskId) state.taskId = d.taskId;
     // 重新切片 → 清空富化与视频状态
-    state.segments = d.segments;
+    state.segments = d.segments.map(s => ({ uid: newUid(), index: s.index, text: s.text || "", chars: s.chars || 0 }));
     state.seconds = d.seconds;
     state.enriched = {};
     state.enrichErrors = {};
+    state.enrichRunning = {};
     Object.values(state.videoJobs).forEach(j => clearInterval(j.timer));
     state.videoJobs = {};
-    status.innerHTML = '<div style="font-size:13px;color:var(--ok)">切成 ' + d.segments.length + ' 段 · 每段目标 ' + d.seconds + ' 秒</div>';
+    status.innerHTML = '<div style="font-size:13px;color:var(--ok)">切成 ' + d.segments.length + ' 段 · 每段目标 ' + d.seconds + ' 秒' + (d.audioDriven ? '（按配音实际时长）' : '') + '（可手动增删/调序）</div>';
     renderSliceList();
-    $("slice-actions").hidden = false;
     refreshNav();
   } catch (e) {
     status.innerHTML = '<div class="error-box">' + e.message + '</div>';
@@ -587,28 +886,141 @@ async function doSlice() {
   btn.disabled = false;
 }
 
-function renderSliceList() {
-  $("slice-list").innerHTML = state.segments.map(s =>
-    '<div class="seg-card">' +
-    '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' +
-    '<span class="seg-meta">' + s.chars + ' 字 · 约 ' + Math.round(s.chars / 5) + ' 秒</span></div>' +
-    '<textarea class="seg-text" rows="3" data-idx="' + s.index + '" oninput="editSegment(' + s.index + ', this.value)">' + esc(s.text.replace(/\n/g, '')) + '</textarea>' +
-    '</div>'
-  ).join("");
+/** 富化页入口：粘贴配音台词后，按配音实际时长自动分段（音频优先主路径） */
+async function sliceFromEnrich() {
+  const script = ($("enrich-script-box") ? $("enrich-script-box").value : "").trim();
+  if (!script) { toast("先把配音台词粘进上面的框"); return; }
+  const seconds = state.audioSeconds || state.seconds;  // 配音优先，否则退固定秒数
+  const old = state.segments.length;
+  if (old) {
+    if (!confirm("重新分段会覆盖当前 " + old + " 段（含手动调整），继续？")) return;
+  }
+  const btn = $("enrich-slice-btn"), status = $("enrich-slice-status");
+  if (btn) btn.disabled = true;
+  if (status) { status.innerHTML = '<div style="font-size:13px;color:var(--muted)">分段中…</div>'; }
+  try {
+    const d = await api("/api/wizard/slice", { taskId: state.taskId, script, seconds });
+    if (d.error) throw new Error(d.error);
+    if (d.taskId) state.taskId = d.taskId;
+    state.segments = d.segments.map(s => ({ uid: newUid(), index: s.index, text: s.text || "", chars: s.chars || 0 }));
+    state.seconds = d.seconds;
+    state.enriched = {};
+    state.enrichErrors = {};
+    state.enrichRunning = {};
+    Object.values(state.videoJobs).forEach(j => clearInterval(j.timer));
+    state.videoJobs = {};
+    if (status) status.innerHTML = '<div style="font-size:13px;color:var(--ok)">切成 ' + d.segments.length + ' 段'
+      + (d.audioSentences > 1
+        ? '（按 ' + d.audioSentences + ' 句台词分）'
+        : ' · 每段目标 ' + d.seconds + ' 秒' + (d.audioDriven ? '（按配音实际时长）' : '')) + '</div>';
+    renderEnrich();
+    refreshNav();
+  } catch (e) {
+    if (status) status.innerHTML = '<div class="error-box">' + e.message + '</div>';
+  }
+  if (btn) btn.disabled = false;
 }
 
-function editSegment(index, text) {
-  const seg = state.segments.find(s => s.index === index);
-  if (seg) { seg.text = text; seg.chars = text.length; }
+function renderSliceList() {
+  const list = $("slice-list");
+  if (!state.segments.length) {
+    list.innerHTML = '<div class="card" style="font-size:13px;color:var(--muted)">还没有切片。先点「开始切片」自动分段，或点下面「＋ 手动添加切片」自己排。</div>';
+    $("slice-actions").hidden = true;
+    return;
+  }
+  list.innerHTML = state.segments.map((s, i) => {
+    const last = i === state.segments.length - 1;
+    return '<div class="seg-card">' +
+      '<div class="seg-head"><span class="seg-no">片段 ' + (i + 1) + '</span>' +
+      '<span class="seg-meta" id="meta-' + s.uid + '">' + charsMeta(s) + '</span>' +
+      '<span class="spacer"></span>' +
+      '<button class="btn btn-ghost btn-sm" title="在这一段后面插入一段" onclick="addSegment(\'' + s.uid + '\')">＋ 插入</button>' +
+      '<button class="btn btn-ghost btn-sm" title="上移" onclick="moveSegment(\'' + s.uid + '\', -1)"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+      '<button class="btn btn-ghost btn-sm" title="下移" onclick="moveSegment(\'' + s.uid + '\', 1)"' + (last ? ' disabled' : '') + '>↓</button>' +
+      '<button class="btn btn-ghost btn-sm" title="删除这一段" onclick="deleteSegment(\'' + s.uid + '\')">删除</button>' +
+      '</div>' +
+      '<textarea class="seg-text" rows="3" id="seg-' + s.uid + '" placeholder="这一段的台词，直接输入…" oninput="editSegment(\'' + s.uid + '\', this.value)">' + esc((s.text || "").replace(/\n/g, '')) + '</textarea>' +
+      '</div>';
+  }).join("");
+  $("slice-actions").hidden = false;
+}
+
+/** 手动加一段：afterUid 为空则加在末尾 */
+function addSegment(afterUid) {
+  const seg = { uid: newUid(), index: 0, text: "", chars: 0 };
+  const i = afterUid ? state.segments.findIndex(s => s.uid === afterUid) : -1;
+  if (i >= 0) state.segments.splice(i + 1, 0, seg);
+  else state.segments.push(seg);
+  renumber();
+  renderSliceList();
+  refreshNav();
+  syncSegments();
+  const ta = $("seg-" + seg.uid);
+  if (ta) {
+    ta.focus();
+    ta.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  toast("已添加片段 " + seg.index + "，直接输入台词");
+}
+
+function deleteSegment(uid) {
+  if (state.segments.length <= 1) { toast("至少保留一段"); return; }
+  const i = state.segments.findIndex(s => s.uid === uid);
+  if (i < 0) return;
+  state.segments.splice(i, 1);
+  delete state.enriched[uid];
+  delete state.enrichErrors[uid];
+  delete state.enrichRunning[uid];
+  if (state.videoJobs[uid]) { clearInterval(state.videoJobs[uid].timer); delete state.videoJobs[uid]; }
+  renumber();
+  renderSliceList();
+  refreshNav();
+  syncSegments();
+  toast("已删除原第 " + (i + 1) + " 段");
+}
+
+function moveSegment(uid, dir) {
+  const i = state.segments.findIndex(s => s.uid === uid);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= state.segments.length) return;
+  const tmp = state.segments[i];
+  state.segments[i] = state.segments[j];
+  state.segments[j] = tmp;
+  renumber();
+  renderSliceList();
+  syncSegments();
+}
+
+function editSegment(uid, text) {
+  const seg = state.segments.find(s => s.uid === uid);
+  if (!seg) return;
+  seg.text = text;
+  seg.chars = text.length;
+  const m = $("meta-" + uid);
+  if (m) m.textContent = charsMeta(seg);
+  // 文案改了 → 旧的富化结果作废
+  if (state.enriched[uid]) { delete state.enriched[uid]; delete state.enrichErrors[uid]; }
+  scheduleSync();
+}
+
+/** 进富化前校验：不能有空段，并先把整表同步给服务端 */
+async function checkSliceReady() {
+  const empty = state.segments.filter(s => !s.text.trim());
+  if (empty.length) {
+    toast("第 " + empty.map(s => s.index).join("、") + " 段还没填台词，请填写或删除");
+    return false;
+  }
+  await syncSegments();
+  return true;
 }
 
 /* ═══════════ 4 导演富化 ═══════════ */
-async function enrichOne(index) {
-  const seg = state.segments.find(s => s.index === index);
+async function enrichOne(uid) {
+  const seg = state.segments.find(s => s.uid === uid);
   if (!seg) throw new Error("片段不存在");
-  const d = await api("/api/wizard/enrich", { taskId: state.taskId, index, segmentText: seg.text });
+  const d = await api("/api/wizard/enrich", { taskId: state.taskId, index: seg.index, segmentText: seg.text });
   if (d.error) throw new Error(d.error);
-  state.enriched[index] = d.visualPrompt;
+  state.enriched[uid] = d.visualPrompt;
   return d;
 }
 
@@ -618,18 +1030,18 @@ async function enrichAll() {
   renderEnrich();
   for (const seg of state.segments) {
     progress.textContent = "富化中 " + seg.index + " / " + state.segments.length + " …";
-    state.enrichRunning[seg.index] = true;
+    state.enrichRunning[seg.uid] = true;
     renderEnrich();
     try {
-      await enrichOne(seg.index);
+      await enrichOne(seg.uid);
     } catch (e) {
-      state.enrichErrors[seg.index] = e.message;
+      state.enrichErrors[seg.uid] = e.message;
     }
-    delete state.enrichRunning[seg.index];
+    delete state.enrichRunning[seg.uid];
     renderEnrich();
   }
   progress.textContent = "";
-  const ok = state.segments.filter(s => state.enriched[s.index]).length;
+  const ok = state.segments.filter(s => state.enriched[s.uid]).length;
   status.innerHTML = '<div style="font-size:13px;color:' + (ok === state.segments.length ? 'var(--ok)' : 'var(--err)') + '">完成 ' + ok + ' / ' + state.segments.length + ' 段' + (ok < state.segments.length ? '，失败的可单独重试' : '') + '</div>';
   btn.disabled = false;
   $("enrich-actions").hidden = ok === 0;
@@ -637,11 +1049,32 @@ async function enrichAll() {
 
 function renderEnrich() {
   const list = $("enrich-list");
-  if (!state.segments.length) { list.innerHTML = ""; return; }
+  if (!state.segments.length) {
+    // 音频优先主路径：从上一步「配音」直跳过来，还没分段 → 让用户粘贴配音台词，按配音时长自动分段
+    const audioNote = state.audioCount
+      ? "当前有 <b>" + state.audioCount + " 句台词</b> · 合计 " + (state.audioSeconds == null ? "时长探测失败" : state.audioSeconds + " 秒")
+        + "，分段后共 " + state.audioCount + " 段"
+      : (state.audioName
+        ? "当前配音：<b>" + esc(state.audioName) + "</b> · " + (state.audioSeconds == null ? "时长探测失败" : state.audioSeconds + " 秒") + "，将按它分段"
+        : "未检测到配音，将按固定 " + state.seconds + " 秒分段（建议先到「配音」页上传台词配音）");
+    list.innerHTML = '<div class="card">' +
+      '<label>粘贴配音台词 <span class="hint">把每句台词按顺序粘进来，点下面按钮按台词配音自动分段（一句一段）；之后逐段富化</span></label>' +
+      '<textarea id="enrich-script-box" rows="9" class="script-box" placeholder="把配音台词整段粘进来…"></textarea>' +
+      '<div class="row" style="align-items:center;margin-top:10px">' +
+        '<button class="btn btn-primary" id="enrich-slice-btn" onclick="sliceFromEnrich()">按台词配音自动分段</button>' +
+        '<span class="hint" id="enrich-slice-hint">' + audioNote + '</span>' +
+        '<span class="spacer"></span>' +
+        '<button class="btn btn-ghost btn-sm" onclick="go(\'script\')">或从主题写文案（无配音）</button>' +
+      '</div>' +
+      '<div id="enrich-slice-status" style="margin-top:10px"></div>' +
+    '</div>';
+    $("enrich-actions").hidden = true;
+    return;
+  }
   list.innerHTML = state.segments.map(s => {
-    const p = state.enriched[s.index];
-    const running = state.enrichRunning[s.index];
-    const err = state.enrichErrors[s.index];
+    const p = state.enriched[s.uid];
+    const running = state.enrichRunning[s.uid];
+    const err = state.enrichErrors[s.uid];
     const badge = p ? '<span class="badge badge-done">已富化</span>'
       : running ? '<span class="badge badge-run">富化中</span>'
       : err ? '<span class="badge badge-fail">失败：' + esc(err) + '</span>'
@@ -649,7 +1082,7 @@ function renderEnrich() {
     return '<div class="seg-card">' +
       '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' + badge +
       '<span class="spacer"></span>' +
-      (p ? '<button class="btn btn-ghost btn-sm" onclick="redoEnrich(' + s.index + ', this)">重新富化</button>' : '') +
+      (p ? '<button class="btn btn-ghost btn-sm" onclick="redoEnrich(\'' + s.uid + '\')">重新富化</button>' : '') +
       '</div>' +
       '<div class="seg-text" style="background:none;border:none;padding:0;color:var(--text)">' + esc(s.text.replace(/\n/g, '')) + '</div>' +
       (p ? '<div class="seg-prompt">' + esc(p) + '</div>' : '') +
@@ -658,17 +1091,18 @@ function renderEnrich() {
   $("enrich-actions").hidden = Object.keys(state.enriched).length === 0;
 }
 
-async function redoEnrich(index) {
-  state.enrichRunning[index] = true;
+async function redoEnrich(uid) {
+  state.enrichRunning[uid] = true;
   renderEnrich();
+  const seg = state.segments.find(s => s.uid === uid);
   try {
-    await enrichOne(index);
-    delete state.enrichErrors[index];
-    toast("片段 " + index + " 重新富化完成");
+    await enrichOne(uid);
+    delete state.enrichErrors[uid];
+    toast("片段 " + (seg ? seg.index : "") + " 重新富化完成");
   } catch (e) {
-    toast("片段 " + index + " 富化失败：" + e.message);
+    toast("片段 " + (seg ? seg.index : "") + " 富化失败：" + e.message);
   }
-  delete state.enrichRunning[index];
+  delete state.enrichRunning[uid];
   renderEnrich();
   refreshNav();
 }
@@ -678,60 +1112,62 @@ function renderVideo() {
   const list = $("video-list");
   if (!state.segments.length) { list.innerHTML = ""; return; }
   list.innerHTML = state.segments.map(s => {
-    const p = state.enriched[s.index];
-    return '<div class="seg-card" id="vcard-' + s.index + '">' +
+    const p = state.enriched[s.uid];
+    return '<div class="seg-card" id="vcard-' + s.uid + '">' +
       '<div class="seg-head"><span class="seg-no">片段 ' + s.index + '</span>' +
       '<span class="badge ' + (p ? "badge-done" : "badge-wait") + '">' + (p ? "已富化" : "未富化，先生成表演提示词") + '</span>' +
       '<span class="spacer"></span>' +
-      (p ? '<button class="btn btn-primary btn-sm" id="vbtn-' + s.index + '" onclick="genVideo(' + s.index + ')">生成视频</button>' : '') +
+      (p ? '<button class="btn btn-primary btn-sm" id="vbtn-' + s.uid + '" onclick="genVideo(\'' + s.uid + '\')">生成视频</button>' : '') +
       '</div>' +
       '<div class="seg-text" style="background:none;border:none;padding:0">' + esc(s.text.replace(/\n/g, '')) + '</div>' +
-      '<div id="vstatus-' + s.index + '"></div>' +
+      '<div id="vstatus-' + s.uid + '"></div>' +
       '</div>';
   }).join("");
 }
 
-async function genVideo(index) {
-  const seg = state.segments.find(s => s.index === index);
-  const prompt = state.enriched[index];
-  const btn = $("vbtn-" + index), status = $("vstatus-" + index);
+async function genVideo(uid) {
+  const seg = state.segments.find(s => s.uid === uid);
+  if (!seg) { toast("片段不存在"); return; }
+  const index = seg.index;
+  const prompt = state.enriched[uid];
+  const btn = $("vbtn-" + uid), status = $("vstatus-" + uid);
   btn.disabled = true;
   status.innerHTML = '<div class="skel" style="margin-top:12px"></div><div style="font-size:13px;color:var(--muted)">提交出片任务中…</div>';
   try {
     const d = await api("/api/wizard/video", { taskId: state.taskId, index, segmentText: seg.text, visualPrompt: prompt });
     if (d.error) throw new Error(d.error);
-    status.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-top:12px">片段 ' + index + ' 生成中（Seedance 出片通常 1-3 分钟），每 5 秒自动查询…</div>';
-    pollVideo(index);
+    status.innerHTML = '<div style="font-size:13px;color:var(--muted);margin-top:12px">片段 ' + index + ' 生成中（测试档 1-2 分钟，正式档十几分钟），每 5 秒自动查询…</div>';
+    pollVideo(uid, index);
   } catch (e) {
     status.innerHTML = '<div class="error-box">' + e.message + '</div>';
     btn.disabled = false;
   }
 }
 
-function pollVideo(index) {
-  if (state.videoJobs[index]) clearInterval(state.videoJobs[index].timer);
+function pollVideo(uid, index) {
+  if (state.videoJobs[uid]) clearInterval(state.videoJobs[uid].timer);
   const timer = setInterval(async () => {
     try {
       const d = await api("/api/wizard/video/" + state.taskId + "/" + index);
       if (d.status === "done" && d.videoUrl) {
         clearInterval(timer);
         const url = d.videoUrl.startsWith("http") ? d.videoUrl : API_BASE + d.videoUrl;
-        $("vstatus-" + index).innerHTML =
+        $("vstatus-" + uid).innerHTML =
           '<video class="result" src="' + url + '" controls playsinline></video>' +
           '<div class="row" style="margin-top:10px"><a class="btn btn-ghost btn-sm" href="' + url + '" download>下载片段 ' + index + '</a>' +
-          '<button class="btn btn-ghost btn-sm" onclick="genVideo(' + index + ')">重新生成</button></div>';
-        const btn = $("vbtn-" + index);
+          '<button class="btn btn-ghost btn-sm" onclick="genVideo(\'' + uid + '\')">重新生成</button></div>';
+        const btn = $("vbtn-" + uid);
         if (btn) { btn.disabled = false; btn.textContent = "重新生成"; }
         toast("片段 " + index + " 出片完成");
       } else if (d.status === "failed") {
         clearInterval(timer);
-        $("vstatus-" + index).innerHTML = '<div class="error-box">出片失败：' + (d.error || "未知错误") + '</div>';
-        const btn = $("vbtn-" + index);
+        $("vstatus-" + uid).innerHTML = '<div class="error-box">出片失败：' + (d.error || "未知错误") + '</div>';
+        const btn = $("vbtn-" + uid);
         if (btn) btn.disabled = false;
       }
     } catch (e) { /* 网络抖动，下轮再查 */ }
   }, 5000);
-  state.videoJobs[index] = { timer };
+  state.videoJobs[uid] = { timer };
 }
 
 /* ═══════════ 初始化 ═══════════ */
@@ -739,6 +1175,7 @@ function esc(s) {
   return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 $("script-box").addEventListener("input", updateScriptChars);
+renderSliceList();
 refreshNav();
 </script>
 </body>

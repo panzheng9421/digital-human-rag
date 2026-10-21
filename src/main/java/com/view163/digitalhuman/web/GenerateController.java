@@ -107,7 +107,7 @@ public class GenerateController {
     private void runPipeline(String taskId, String topic, String persona) {
         TaskInfo t = tasks.get(taskId);
         try {
-            String personaName = "anuo".equals(persona) ? "阿诺" : "老潘";
+            String personaName = "anuo".equals(persona) ? "阿诺" : "qipao".equals(persona) ? "旗袍主播" : "老潘";
             String docsDir = props.getDocsDir() + "/" + persona;
             System.out.println("[" + taskId + "] 开始出片：persona=" + persona + " topic=" + topic);
 
@@ -134,7 +134,7 @@ public class GenerateController {
                 String seg = slices.get(i);
                 String segContext = buildSegmentContext(i, slices.size(), seg, prevTail);
                 String segEnriched = enricher.enrich(segContext, personaName, persona);
-                String segVisual = enrichPrompt.extractVisual(segEnriched);
+                String segVisual = enrichPrompt.extractVisual(segEnriched, persona);
                 String segPrompt = segVisual + "\n\n[台词]\n" + seg;
 
                 Path segFile = taskDir.resolve(String.format("seg_%02d.mp4", i + 1));

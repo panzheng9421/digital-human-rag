@@ -1,13 +1,13 @@
 # 本文件是模板，提交到仓库。
 # 使用方法：复制为 application.yml 并填入真实 key（application.yml 已被 .gitignore 忽略，不会上传）。
 # 或者设置环境变量后直接运行，无需改本文件：
-#   PowerShell:  $env:DASHSCOPE_API_KEY="sk-xxx"; $env:DEEPSEEK_API_KEY="sk-yyy"; $env:ARK_API_KEY="sk-zzz"
-#   CMD:         set DASHSCOPE_API_KEY=sk-xxx && set DEEPSEEK_API_KEY=sk-yyy && set ARK_API_KEY=sk-zzz
+#   PowerShell:  $env:DASHSCOPE_API_KEY="sk-xxx"; $env:DEEPSEEK_API_KEY="sk-yyy"
+#   CMD:         set DASHSCOPE_API_KEY=sk-xxx && set DEEPSEEK_API_KEY=sk-yyy
 app:
   dashscope-api-key: ${DASHSCOPE_API_KEY:sk-请替换为你的百炼key}
   deepseek-api-key: ${DEEPSEEK_API_KEY:sk-请替换为你的DeepSeekkey}
   docs-dir: ./src/main/resources/docs   # 知识库根目录；实际加载 docs/{persona} 子目录
-  persona: anuo        # 人设：pan（老潘）/ anuo（阿诺）；决定用哪套 prompt 与哪个知识库
+  persona: qipao        # 人设：pan（老潘）/ anuo（阿诺）/ qipao（旗袍主播）；决定用哪套 prompt、参考图与知识库
   top-k: 3            # 检索召回的片段数
   dimension: 1024     # 向量维度，需与百炼 text-embedding-v4 一致
   temperature: 0.7    # 生成随机度
@@ -17,24 +17,20 @@ app:
     model-id: doubao-seedream-4-0-250828   # 方舟文生图模型；可换 doubao-seedream-5-0-lite 等
 
   # ===== 视频生成 =====
-  # 参考图：默认 1 张「人物 + 场景一图全含」的已授权真人素材（asset://）。
-  # 未开「已授权真人素材」通道时，方舟禁止直接传真人人脸 URL（报 PrivacyInformation）。
-  # 可用 pan-reference-image-urls / anuo-reference-image-urls 按人设覆盖。
   video:
-    # ---- 通用参数（所有引擎共享）----
-    provider: volcengine       # 出片引擎：volcengine（方舟直连，推荐）/ grok / seedance
-    seconds: 30                # 切片时长（秒）；2.5 支持 ≤30s，2.0-mini 硬上限 15s
-    size: 720                  # 480 / 720 / 1080（越贵越清晰，调试用低档）
+    # 出片引擎：h3（本地 ComfyUI MiniMax-H3 r2v）/ volcengine（方舟 Seedance 2.5）/ seedance（中转）/ grok
+    provider: h3
+    # 默认单镜时长（秒），只在「没配参考音频」时生效。
+    # ★ 2026-10-21 老板口径：工作流是「先有配音、后让 H3 出完整视频」→ persona 配了 reference-audios 时，
+    #   切片/富化/出片时长一律按配音实际长度（ffprobe 探测，向上取整），不锁死这个值。
+    #   H3 单段硬上限 ≈15.1s（362 帧 @24fps），超出自动拆子段串行生成后 ffmpeg 拼接。
+    seconds: 30
+    size: 720
     output-dir: ./output       # Stage3 切片视频落盘目录（确定性命名 seg_XX.mp4，支持断点续跑）
     retry-attempts: 0          # 单切片出片失败时的额外重试次数（不含首次）
     ratio: "16:9"              # 输出比例（方舟专用）：16:9 / 9:16 / 1:1 / adaptive；⚠️ 必须加引号，否则 YAML 会把 16:9 当六十进制数字解析成 969
     generate-audio: true       # 是否由模型生成配音（方舟专用）；false=静音仅环境音
-    ffmpeg-path: ffmpeg        # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 C:/ffmpeg/bin/ffmpeg.exe
-    reference-image-urls:
-      - asset://asset-请替换为你的已授权真人素材id   # 人物+背景一图全含；方舟控制台「真人人像→管理素材」录入授权后获得
-    # pan-reference-image-urls:    # 老潘专属参考图（前 N 张为 asset:// 真人素材，可末张补场景 URL）
-    #   - asset://asset-老潘真人素材id
-    #   - https://img.triview.cn/ai/bedroom-night.png
+    ffmpeg-path: ffmpeg        # Stage4 拼接用 ffmpeg 路径，默认取 PATH；Windows 填绝对路径如 D:/tools/ffmpeg.exe
 
     # ---- 参考音频（方舟 Seedance 2.5 专用，锁定真人音色/口型）----
     # 填入方舟「素材&虚拟人像库」拿到的 asset:// 音频素材ID，非空时自动追加
@@ -42,10 +38,6 @@ app:
     # 2.5 约束：单段 [2,30]s、最多 10 段、总时长 ≤30s、wav/mp3、单文件 ≤15MB。
     # reference-audio-urls:
     #   - asset://asset-xxxxxxxx-audio
-    # pan-reference-audio-urls:    # 老潘专属音色（覆盖默认）
-    #   - asset://asset-老潘录音的音频素材id
-    # anuo-reference-audio-urls:   # 阿诺专属音色（覆盖默认）
-    #   - asset://asset-阿诺录音的音频素材id
 
     # ---- 引擎配置（按 provider 选一块生效）----
     seedance:
@@ -57,11 +49,94 @@ app:
       base-url: https://api.x.ai   # 中转站时改为 https://sub.xlcsh.top
       api-key: ${XAI_API_KEY:}     # Grok 引擎密钥；为空时回退读环境变量 XAI_API_KEY
       reference-audio-ids: []       # Grok 预设人声 voice_id 列表，最多 3 个；非空时启用 reference_audios 自合成语音
-      # 可选音色：eve=活力明快 / ara=温暖友好 / leo=权威有力 / rex=自信清晰 / sal=平稳均衡
 
     volcengine:
       base-url: https://ark.cn-beijing.volces.com  # 火山方舟 API 基地址（勿带末尾斜杠）
       api-key: ${ARK_API_KEY:}     # 火山方舟 API Key；为空时回退读环境变量 ARK_API_KEY
-      model-id: doubao-seedance-2-5-260628   # Seedance 2.5 方舟官方ID（横线+日期后缀）；单条时长≤30s，支持真人 asset:// + reference_audio 锁声音
+      model-id: doubao-seedance-2-5-260628   # Seedance 2.5 方舟官方ID（横线+日期后缀）
       # ⚠️ 真人肖像限制：未开「已授权真人素材」通道时，doubao-seedance-2-5 不支持直接传真人人脸参考图；
       # 需改用虚拟人 asset://xxx 或已授权真人素材，否则直连官方会被拒。
+
+    # 本地 H3：跑在本机 ComfyUI（127.0.0.1:8198），权重名与 ComfyUI/models 下实际文件一致
+    # ★ 硬参数遵循 D:/ai/rag/director-desk/30_出片管线/MiniMaxH3_出片SOP.md（2026-10-21 版）：
+    #   正式档 1344×768 + 8 步 + 挂 ref2v 8step LoRA；测试档 864×480 + 4 步 + 挂 ref2v 4step LoRA。两档不许混用。
+    # ★ 数值一律照抄 D:/ai/opc/minimax-h3/submit_r2v.py 的 PROFILES/常量，见同行 SOP。
+    h3:
+      # formal=正式档(交付) / test=测试档(试prompt构图，画质不作数，不得交付) / custom=用下面显式值
+      profile: formal
+      # ── 正式档（★ SOP 定稿，勿改）：0.98MP + 8 步 + 挂 ref2v 8step LoRA ──
+      formal-width: 1344
+      formal-height: 768
+      formal-steps: 8
+      formal-lora: minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors
+      # ── 测试档（★ SOP 定稿，勿改）：0.4MP + 4 步 + 挂 ref2v 4step LoRA ──
+      test-width: 864
+      test-height: 480
+      test-steps: 4
+      test-lora: minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors
+      base-url: http://127.0.0.1:8198
+      unet: minimax_h3_ref2va_pruned_int8_convrot.safetensors      # models/diffusion_models/
+      clip: qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors           # models/text_encoders/
+      vae-video: minimax_h3_video_vae_fp16.safetensors             # models/vae/
+      vae-audio: minimax_h3_audio_vae_fp32.safetensors             # models/vae/
+      sampler: res_multistep # 官方 r2v 固定，别改
+      scheduler: simple
+      denoise: 1.0
+      lora-strength: 1.0
+      fps: 24
+      max-frames: 362        # 单段上限 ≈15.1s；更长的切片会自动拆子段再 ffmpeg 拼接
+      timeout-seconds: 7200  # 单子段轮询上限（768p 慢，10-20 分钟级）
+      # ★ SOP 2026-10-21 新增「原图」口径：默认 max = 参考图按 2048 短边送入视觉塔（身份最强），
+      #   短边 ≤2048 的参考图原样不压；match = 缩到生成画布像素面积（4k/2k 大图归一成 880×1168，快数倍）。
+      #   注意：这是节点推理时的送入方式，磁盘上的图文件原样不动，不会真的改写原图。
+      ref-image-size: max
+      # 下面三个只在 profile=custom 时生效（formal/test 走上面的档位硬参数）
+      width: 1344
+      height: 768
+      steps: 8
+      use-lora: true
+      lora: minimax_h3_ref2v_turbo_8step_v1.0_768p_comfyui_bf16.safetensors
+      # 超分：SOP 唯一标准 = submit_vsr.py（ComfyUI RTXVideoSuperResolution / nvvfx 硬件 VSR）
+      upscale: vsr           # vsr=走超分脚本 / none=不超分（测试档自动跳过）
+      vsr-script: D:/ai/opc/minimax-h3/submit_vsr.py
+      python-path: C:/Users/请替换为你的用户名/.workbuddy/binaries/python/versions/3.13.12/python.exe
+      comfy-input-dir: D:/ai/opc/minimax-h3/ComfyUI/input
+      vsr-out-dir: D:/ai/video/小白厨房/output_sr   # 脚本硬编码落点，跑完自动拷回项目目录并清掉
+      # ── 音频驱动口径（★ SOP「音频驱动/换轨」2026-10-18 定案）──
+      # r2v 原生吃音频：填了 reference-audios 就弹到 ref_audios 端口（prompt 用 <Audio N> 引用），
+      # H3 直出音轨即交付音轨，所以 swap-audio 默认关。仅当实测音画漂移时才开。
+      swap-audio: false      # true = 出片后用原 wav 覆盖音轨（画面 -c:v copy 零重编码）
+      audio-track: ""        # swap-audio=true 时必填：原音 wav 绝对路径
+      # ★ 2026-10-21 老板口径「不设置默认音频」：每条视频的配音都是独立上传的，
+      #   不应在 yml 里硬绑一条默认 wav（否则每次出片都静默复用同一条配音）。
+      #   留空 = 启动时不带默认配音；必须在工作台「配音」页为本次项目上传/选择，
+      #   否则时长回退到 app.video.seconds（固定秒数，老板不想要的路径）。
+      reference-audios: []       # 本地 wav/mp3 绝对路径（自动拷进 ComfyUI input）
+      pan-reference-audios: []
+      anuo-reference-audios: []
+      qipao-reference-audios: []
+      # 参考图：填本地图片绝对路径（自动上传 ComfyUI input）。优先用资产库现成资产：
+      #   D:/ai/rag/director-desk/30_出片管线/资产库/角色|场景|道具
+      # ⚠️ 资产未锁定时本线走纯文生视频，人物长相不锁定，不得声称可直接出片。
+      reference-images: []
+      pan-reference-images: []
+      # anuo-reference-images:
+      #   - D:/ai/video/digital-human-rag/assets/anuo_fullbody_0291.png
+      # qipao 双参考（2026-10-22）：@图片1 人物图 + @图片2 主播书房背景图（空景）
+      # qipao-reference-images:
+      #   - D:/ai/video/digital-human-rag/assets/qipao_host_0291.jpg
+      #   - D:/ai/video/digital-human-rag/assets/studio_bg_01.jpg
+      # ── 场景锁定（2026-10-21 加）：背景/机位/光线写死成固定文字，每镜原样注入 prompt ──
+      # 为什么要这个：富化是逐镜独立调 LLM 的，背景交给它写必然每镜漂移；
+      # 而参考图是纯色棚拍（图里没有房间），"完整复刻图中场景"等于没有锚点 → 模型随机发挥。
+      # ★ 改这里就能换场景，不用改代码。留空 = 不注入（恢复旧行为）。
+      # ★ 这里写的是「参考图里没有的信息」，所以不与参考图冲突。若换成带真实房间的参考图，可留空交给图。
+      # anuo-scene-lock / pan-scene-lock / qipao-scene-lock 按 persona 配置，
+      # 写法见本地 application.yml（本地配置含各 persona 实例文本，此处省略）。
+
+# 配音上传（工作台）：wav 动辄几 MB，Spring 默认 1MB 会被拒，这里放到 60MB
+spring:
+  servlet:
+    multipart:
+      max-file-size: 60MB
+      max-request-size: 60MB

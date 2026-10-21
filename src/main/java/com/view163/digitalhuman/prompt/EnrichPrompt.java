@@ -22,9 +22,31 @@ import java.util.regex.Pattern;
 public class EnrichPrompt {
 
     private final int videoSeconds;
+    private final AppProperties props;
 
     public EnrichPrompt(AppProperties props) {
+        this.props = props;
         this.videoSeconds = props.getVideo().getSeconds();
+    }
+
+    /**
+     * 本段有效时长（秒）：persona 配了参考音频 → 按配音实际时长（老板 2026-10-21 口径：
+     * 先有配音后出片，视频长度跟配音走，不锁死配置秒数）；没配音频才用配置秒数。
+     * 富化的时间戳规则必须和出片实际帧数一致，否则 prompt 说 30s、片子只有 10s，节奏全乱。
+     *
+     * ★ 按台词分句时传 index（第几句）：第 N 段要用**第 N 句**的时长，不能用第一句的，
+     *   否则后半段的时间戳会和实际帧数对不上（2026-10-21 老板纠正后的口径）。
+     */
+    private int effectiveSeconds(String persona) {
+        return effectiveSeconds(persona, 1);
+    }
+
+    private int effectiveSeconds(String persona, int index) {
+        try {
+            Integer a = props.getVideo().audioSecondsFor(persona, index);
+            if (a != null && a > 0) return a;
+        } catch (Exception ignore) { }
+        return videoSeconds;
     }
 
     private static final String SYSTEM_TEMPLATE = """
@@ -42,9 +64,10 @@ public class EnrichPrompt {
 
             【官方素材标注语法（硬性）】
             "@图片N" 对应本次提交 input_reference 数组的第 N 张图（1 起始，不是 0）。
-            本任务固定 1 张参考图，职责锁定如下，禁止用"第1张""单人照"等自然语言模糊指代：
+            本任务共 {ref_count} 张参考图，职责锁定如下，禁止用"第1张""单人照"等自然语言模糊指代：
               @图片1 = 主角全身照（含人物外貌/发型/服装/全身姿态，同时包含完整房间背景，人物与场景一图全含）
-            本任务仅此 1 张参考图，全部采用，无【未采用素材】段。
+            {ref_extra}
+            全部采用，无【未采用素材】段。
 
             [画面提示] 必须严格按以下结构输出（【段标】属于可直接提交的 Prompt 正文，不是回答包装）；
             在【保持一致】之后，继续在同一 [画面提示] 块内依次输出【音色锚定】内嵌子段与【台词】段
@@ -54,8 +77,9 @@ public class EnrichPrompt {
             生成{posture}、正对镜头自然口播的连续视频；核心主体是<角色名>，主要事件是讲述本段口播内容——{用一句话概括本段内容主线，如"自我介绍、自嘲身份、引出产品名"}。
 
             【参考素材职责】
-            @图片1用于<角色名>的五官、发型、服装和全身姿态，同时用于房间背景，完整复刻图中场景。
-            ⚠️ 参考图已包含的信息（家具样式、墙面装饰、光线方向等）禁止逐项列举——只写"完整复刻图中场景"，相信参考图。
+            @图片1用于<角色名>的五官、发型、服装和全身姿态，完整复刻图中人物形象。
+{ref_scene_note}            ⚠️ 参考图已包含的信息（人物五官、服装纹理、家具样式、墙面装饰、光线方向等）禁止逐项列举——只写"完整复刻图中形象/场景"，相信参考图。
+{audio_ref_note}
 
             【主体与关系】
             <角色名>对应@图片1，始终保持五官、发型、服装和房间背景一致；{posture_detail}
@@ -75,7 +99,7 @@ public class EnrichPrompt {
 
             【保持一致】
             保持<角色名>身份与服装、房间场景布局（床铺/书桌/书架/墙面）、机位与光线稳定；全程同一数字人，不分裂、不换脸。
-            声音与画面：不要字幕，不添加任何文字叠加；无背景音乐，仅保留环境音与动作音（如衣物摩擦、呼吸、{env_sound}）。
+{audio_ref_sound}
 
             【真实感表演准则（融合进上述每段动作/表情描写，最高优先级）】
             三大排除：①非影视剧表演（杜绝瞪眼/青筋/下颌隆起）②非日漫夸张（杜绝甩头/张大嘴）③非AI僵硬（杜绝面无表情/匀速无变化/眼神空洞）。
@@ -110,6 +134,7 @@ public class EnrichPrompt {
 
             [音色锚定]
             {voice_anchor}
+{audio_ref_voice}
 
             ══════════════════════════════════════════════════════
             第四部分（[画面提示] 末段）：【台词】 —— 完整台词原文
@@ -129,7 +154,8 @@ public class EnrichPrompt {
             ❌ [画面提示]必须包含完整的【生成目标】【参考素材职责】【主体与关系】【整体风格】【严格排除】【事件脚本】【保持一致】【台词】八段 + 内嵌【音色锚定】（在【保持一致】与【台词】之间；台词节奏信息已内联进【事件脚本】，不单独成段），且参考图必须用@图片1绑定
             ❌ 整段输出必须以半角 [画面提示] 作为第一个标签开头，所有内容（含【音色锚定】）必须位于 [画面提示] 块内；禁止省略 [画面提示] 标签，或把任何子段放到 [画面提示] 块外成为独立顶层块
             ❌ 参考图已经包含的信息（服装纹理、家具样式、光线方向、场景布局、人物五官）禁止在 prompt 中重复描述——重复描述会与参考图冲突导致生成不稳定；相信参考图即可，只描述参考图没有的「动作/情绪/台词/镜头」
-            ❌ 禁止用"第1张""单人照"等自然语言指代参考图——必须用@图片1；本任务仅 1 张参考图，禁止虚构@图片2或更多参考图
+            ❌ 禁止用"第1张""单人照"等自然语言指代参考图——必须用@图片N；禁止虚构超出实际数量的@图片N
+            ❌ ★ 禁止更换或新增场景：背景/机位/光线由系统以【场景锁定】段固定注入，你不得在【生成目标】【事件脚本】【保持一致】里引入别的地点、房间、户外或大件道具（禁止出现厨房/阳台/办公室/街头/书架前等），也不得描写家具位移、墙面变色、光线转冷转暗——只要人物动作、表情与台词
             ❌ 不要用影视剧/播音腔/广告腔——要像真人拿手机自拍录 Vlog 的感觉
             ❌ 不要出现嘴角/皱纹/青筋/瞳孔骤变等微观面部词或浮夸描写
             ❌ 禁止输出独立的[台词节奏]表格或元数据列表（字数/语速/停顿前/重音/关联动作等列项）——重音/语速/停顿必须内联进【事件脚本】各时间子段的散文里
@@ -138,10 +164,13 @@ public class EnrichPrompt {
             ❌ 所有段名（[画面提示][台词节奏][音色锚定]等）必须用半角方括号 []，严禁使用全角【】——全角会导致下游截取失败，把无关内容泄露给视频模型
             """;
 
-    /** 按人设返回姿势描述（pan=老潘坐椅子 / anuo=阿诺盘腿坐床） */
+    /** 按人设返回姿势描述（pan=老潘坐椅子 / anuo=阿诺盘腿坐床 / qipao=旗袍主播坐书桌前） */
     private static String postureFor(String persona) {
         if ("anuo".equals(persona)) {
             return "<角色名>盘腿坐于大床中央";
+        }
+        if ("qipao".equals(persona)) {
+            return "<角色名>坐于书桌前";
         }
         // pan 及其他默认：坐在椅子上面对镜头
         return "<角色名>坐在椅子上面对镜头";
@@ -151,6 +180,9 @@ public class EnrichPrompt {
         if ("anuo".equals(persona)) {
             return "盘腿坐在大床中央正对镜头。";
         }
+        if ("qipao".equals(persona)) {
+            return "坐在书桌前的椅子上，双手自然交叠放在桌面上，正对镜头。";
+        }
         return "坐在椅子上正对镜头。";
     }
 
@@ -158,12 +190,18 @@ public class EnrichPrompt {
         if ("anuo".equals(persona)) {
             return "盘腿坐床中央";
         }
+        if ("qipao".equals(persona)) {
+            return "坐于书桌前";
+        }
         return "坐在椅子上";
     }
 
     private static String envSoundFor(String persona) {
         if ("anuo".equals(persona)) {
             return "床垫轻微声响";
+        }
+        if ("qipao".equals(persona)) {
+            return "房间轻微环境底噪";
         }
         return "椅子轻微声响";
     }
@@ -173,21 +211,69 @@ public class EnrichPrompt {
         if ("anuo".equals(persona)) {
             return "音色描述：青年女声（约22岁），标准普通话，清亮略带沙哑质感，语速轻快自然有呼吸感，语气活泼带轻微吐槽感。";
         }
+        if ("qipao".equals(persona)) {
+            return "音色描述：青年女声（约22岁），标准普通话，清亮甜美质感，语速轻快自然有呼吸感，语气亲切像在跟朋友聊天。";
+        }
         // pan（老潘）：中年男声，实干技术老哥
         return "音色描述：中年男声（约35岁），标准普通话带一点京腔的懒散尾音，音质沉稳偏沙哑有颗粒感，语速中等偏慢且有呼吸感和叹气感，语气带有自嘲调侃的松弛感。";
     }
 
     public String buildSystem(String persona) {
-        String vs = String.valueOf(videoSeconds);
+        return buildSystem(persona, 1);
+    }
+
+    /** index = 第几句台词（1 起始）：多条配音时每段用各自那句的时长，时间戳才和出片帧数一致 */
+    public String buildSystem(String persona, int index) {
+        int eff = effectiveSeconds(persona, index);
+        String vs = String.valueOf(eff);
+        // 参考图张数：决定 @图片N 允许用到几（≥2 张时第 2 张定位为场景背景图）
+        int refCount = 1;
+        try {
+            var refs = props.getVideo().getH3().getReferenceImagesFor(persona);
+            if (refs != null && !refs.isEmpty()) refCount = refs.size();
+        } catch (Exception ignore) { }
+        String refExtra = refCount >= 2
+                ? "  @图片2 = 场景背景图（空景，无人物），用于锁定房间布局/机位/光线\n"
+                : "";
+        // 双图模式（人物图+背景图）：【参考素材职责】段补一句 @图片2 的职责，
+        // 避免 LLM 以为房间来自人物图（人物图是纯色/无房间背景，会冲突）。
+        String refSceneNote = refCount >= 2
+                ? "            @图片2是场景背景图（空景，无人物），用于锁定房间布局、家具与光线；人物须自然融入该场景，不得悬浮或穿帮。\n"
+                : "";
+        // ★ 音频参考（SOP「音频驱动」口径）：persona 配了 reference-audios 时，
+        //   r2v 会把 wav 挂到 ref_audios 端口 + audio_vae 编码进 latent。
+        //   此时音色/台词/节奏完全复用音频（fully_copy），prompt 必须声明 <Audio 1> 职责，
+        //   否则模型不知道有音频参考，会按文字自由发挥嗓音。
+        boolean hasAudio = false;
+        try {
+            var auds = props.getVideo().getH3().getReferenceAudiosFor(persona);
+            hasAudio = auds != null && !auds.isEmpty();
+        } catch (Exception ignore) { }
+        String audioNote = hasAudio
+                ? "            【音频参考职责】\n"
+                  + "            <Audio 1>是本镜的完整配音轨（含台词、音色、语速、停顿节奏），fully_copy：成片音轨直接复用该音频，不做任何改写；人物的口型、开口时机与表演节奏必须跟随<Audio 1>；本段【台词】与音频内容一致，仅用于表演节奏参考。\n"
+                : "";
+        String audioSound = hasAudio
+                ? "            声音与画面：不要字幕，不添加任何文字叠加；无背景音乐；台词与音色完全来自<Audio 1>（fully_copy，不得改唱、不得换音色、不得增删语气词），仅叠加环境音与动作音（如衣物摩擦、呼吸、{env_sound}）。\n"
+                : "            声音与画面：不要字幕，不添加任何文字叠加；无背景音乐，仅保留环境音与动作音（如衣物摩擦、呼吸、{env_sound}）。\n";
+        String audioVoice = hasAudio
+                ? "            注：以上音色描述仅作兜底，<Audio 1>的实际音色以参考音频为准；若两者不一致，严格按<Audio 1>的音色、语速与语气执行。\n"
+                : "";
         String tpl = SYSTEM_TEMPLATE
+                .replace("{ref_count}", String.valueOf(refCount))
+                .replace("{ref_extra}", refExtra)
+                .replace("{ref_scene_note}", refSceneNote)
                 .replace("{posture}", postureFor(persona))
                 .replace("{posture_detail}", postureDetailFor(persona))
                 .replace("{posture_short}", postureShortFor(persona))
                 .replace("{env_sound}", envSoundFor(persona))
-                .replace("{videoSecondsDiv}", String.valueOf(Math.max(1, videoSeconds / 4)))
+                .replace("{videoSecondsDiv}", String.valueOf(Math.max(1, eff / 4)))
                 .replace("{videoSeconds}", vs)
-                .replace("{videoSeconds+1}", String.valueOf(videoSeconds + 1))
-                .replace("{voice_anchor}", voiceAnchorFor(persona));
+                .replace("{videoSeconds+1}", String.valueOf(eff + 1))
+                .replace("{voice_anchor}", voiceAnchorFor(persona))
+                .replace("{audio_ref_note}", audioNote)
+                .replace("{audio_ref_sound}", audioSound)
+                .replace("{audio_ref_voice}", audioVoice);
         return tpl;
     }
 
@@ -217,6 +303,17 @@ public class EnrichPrompt {
     public String extractVisual(String enriched) {
         String vis = extractVisualRaw(enriched);
         return capTimestamps(vis, videoSeconds);
+    }
+
+    /** 同 extractVisual，但按 persona 解析有效时长（配音驱动时用音频实际时长裁时间戳） */
+    public String extractVisual(String enriched, String persona) {
+        return extractVisual(enriched, persona, 1);
+    }
+
+    /** 按第 index 句配音的时长裁时间戳（多条配音时每段各自对齐） */
+    public String extractVisual(String enriched, String persona, int index) {
+        String vis = extractVisualRaw(enriched);
+        return capTimestamps(vis, effectiveSeconds(persona, index));
     }
 
     /** 提取原始 [画面提示] 块（不做时间戳裁剪）。

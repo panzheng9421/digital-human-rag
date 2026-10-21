@@ -168,6 +168,84 @@ public class ScriptSlicer {
                 || (c >= '0' && c <= '9') || c == '_' || c == '-' || c == '.';
     }
 
+    // ── 按配音分句切（2026-10-21 老板口径：一句台词一条音频）────────────────
+
+    /**
+     * 按「每句配音的秒数」分段：**段数 = 配音条数**，第 i 段字数按该句秒数占比分配。
+     *
+     * 为什么不再按统一秒数切：老板的工作流是「第一句台词、第二句台词、第三句台词各一条音频」，
+     * 每句长短不一（3s / 7s / 12s），出片时第 N 段只挂第 N 条音频。若按统一秒数切文案，
+     * 段数和音频条数对不上 → 第 2 段会去挂第 1 句的声音，台词全错。
+     *
+     * 分配策略：目标字数 ∝ 该句秒数；原子（标点句）贪心装入，装不下就进下一段；
+     * 末段吞掉所有剩余。原子数少于段数时（文案比配音短）该段为空 → 用上一段末句兜底并告警。
+     */
+    public List<String> sliceByPlan(String script, List<Integer> secondsPlan) {
+        if (script == null || script.isBlank()) return List.of();
+        if (secondsPlan == null || secondsPlan.isEmpty()) return slice(script);
+        int n = secondsPlan.size();
+        if (n == 1) return slice(script, Math.max(5, secondsPlan.get(0)));
+
+        int totalSecs = 0;
+        for (Integer s : secondsPlan) totalSecs += Math.max(1, s == null ? 1 : s);
+        int len = script.length();
+
+        // 目标字数：按秒数占比分配（末段吃掉余数，保证字数总和 = 全文）
+        int[] target = new int[n];
+        int used = 0;
+        for (int i = 0; i < n; i++) {
+            if (i == n - 1) {
+                target[i] = Math.max(4, len - used);
+            } else {
+                int t = (int) Math.round((double) len * Math.max(1, secondsPlan.get(i)) / totalSecs);
+                int reserve = (n - 1 - i) * 4;              // 给后面每段至少留 4 字
+                t = Math.max(4, Math.min(t, len - used - reserve));
+                target[i] = t;
+                used += t;
+            }
+        }
+
+        int maxTarget = 4;
+        for (int t : target) maxTarget = Math.max(maxTarget, t);
+        List<String> atoms = splitIntoAtoms(script, maxTarget);
+
+        List<String> out = new ArrayList<>();
+        int ai = 0;
+        for (int i = 0; i < n; i++) {
+            StringBuilder buf = new StringBuilder();
+            while (ai < atoms.size()) {
+                if (i == n - 1) {                            // 末段：全部剩余
+                    buf.append(atoms.get(ai++));
+                    continue;
+                }
+                String next = atoms.get(ai);
+                if (buf.length() > 0 && buf.length() + next.length() > target[i]) break;
+                buf.append(atoms.get(ai++));
+                if (buf.length() >= target[i]) break;
+            }
+            String seg = buf.toString().trim();
+            if (seg.isEmpty()) {
+                // 文案原子已用完（文案比配音短）：重复上一段末句兜底，别让富化拿到空串
+                seg = out.isEmpty() ? script.trim() : tailSentenceOf(out.get(out.size() - 1));
+                System.out.println("[切片] 警告：第 " + (i + 1) + " 句配音没有对应文案，已用上一段末句兜底；"
+                        + "建议补足文案（配音 " + n + " 句）");
+            }
+            out.add(seg);
+        }
+        return out;
+    }
+
+    /** 取一段文案的最后一句（用于分句兜底，避免整段重复） */
+    private String tailSentenceOf(String seg) {
+        if (seg == null || seg.isBlank()) return "";
+        int cut = -1;
+        for (int i = seg.length() - 2; i >= 0; i--) {
+            if (PRIMARY_DELIMS.indexOf(seg.charAt(i)) >= 0) { cut = i + 1; break; }
+        }
+        String tail = cut > 0 ? seg.substring(cut).trim() : seg.trim();
+        return tail.isEmpty() ? seg.trim() : tail;
+    }
+
     // ── Step 3: 过短段合并 ───────────────────────────────────
 
     /**

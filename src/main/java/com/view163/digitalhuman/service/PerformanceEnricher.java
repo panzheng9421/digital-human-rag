@@ -20,12 +20,18 @@ public class PerformanceEnricher {
     }
 
     /** 返回完整富化文本（含 [画面提示][台词节奏][音色锚定]）
-     * @param persona 英文人设ID（pan/anuo/kaka/samuel），用于选择姿势等差异化模板 */
+     * @param persona 英文人设ID（pan/anuo/kaka/samuel），用于选择姿势等差异化模板
+     * @param index   第几句台词（1 起始）：多条配音时按该句时长生成时间戳 */
     public String enrich(String script, String personaName, String persona) {
-        String system = enrichPrompt.buildSystem(persona);
+        return enrich(script, personaName, persona, 1);
+    }
+
+    public String enrich(String script, String personaName, String persona, int index) {
+        String system = enrichPrompt.buildSystem(persona, index);
         String user = enrichPrompt.buildUser(script, personaName);
         System.out.println("[ENRICH] ── 富化入参 ── persona=" + persona + "（" + personaName
-                + "），片段 " + script.length() + " 字，system " + system.length() + " 字，user " + user.length() + " 字");
+                + "），第 " + index + " 段，片段 " + script.length() + " 字，system " + system.length()
+                + " 字，user " + user.length() + " 字");
         System.out.println("[ENRICH] user（发给 DeepSeek 的完整富化文本）──\n" + user);
         return llm.chat(system, user);
     }

@@ -2,6 +2,7 @@ package com.view163.digitalhuman;
 
 import com.view163.digitalhuman.config.AppProperties;
 import com.view163.digitalhuman.prompt.EnrichPrompt;
+import com.view163.digitalhuman.service.H3VideoGenService;
 import com.view163.digitalhuman.service.PerformanceEnricher;
 import com.view163.digitalhuman.service.ScriptGenerator;
 import com.view163.digitalhuman.service.ScriptSlicer;
@@ -131,6 +132,10 @@ public class DemoApplication {
         if ("volcengine".equalsIgnoreCase(provider)) {
             System.out.println("[引擎] 使用火山方舟 Seedance 2.5（官方直连）出片");
             return new VolcengineVideoGenService(props, persona);
+        }
+        if ("h3".equalsIgnoreCase(provider)) {
+            System.out.println("[引擎] 使用本地 H3（MiniMax-H3 r2v，ComfyUI " + props.getVideo().getH3().getBaseUrl() + "）出片");
+            return new H3VideoGenService(props, persona);
         }
         System.out.println("[引擎] 使用 Seedance（new.xlcsh.top 中转）出片");
         return new VideoGenService(props, persona);
